@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "545085974690",
+    "project_id": "smart-fintech-app",
+    "storage_bucket": "smart-fintech-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545085974690:android:82415f04dbb71956d28ffb",
+        "android_client_info": {
+          "package_name": "com.example.fintech_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBB7VGuf4BXIpc3Dx3ro7c0UVHOuieDumo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
