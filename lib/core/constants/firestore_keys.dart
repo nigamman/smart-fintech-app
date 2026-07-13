@@ -1,10 +1,10 @@
 class FirestoreKeys {
+  const FirestoreKeys._();
+
   static const id = 'id';
-  static const userId = 'userId';
-  static const amount = 'amount';
-  static const type = 'type';
-  static const category = 'category';
-  static const note = 'note';
-  static const transactionDate = 'transactionDate';
+  static const name = 'name';
+  static const email = 'email';
+  static const monthlyIncome = 'monthlyIncome';
+  static const monthlySavingsGoal = 'monthlySavingsGoal';
   static const createdAt = 'createdAt';
 }
