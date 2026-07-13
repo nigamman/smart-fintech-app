@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/theme/app_theme.dart';
 import 'app_router.dart';
-import 'app_theme.dart';
 
 class FinTrackApp extends ConsumerWidget {
   const FinTrackApp({super.key});
