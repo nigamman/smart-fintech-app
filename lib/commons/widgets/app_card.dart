@@ -1,51 +1,49 @@
 import 'package:flutter/material.dart';
 
-class AppTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String? hintText;
-  final TextInputType keyboardType;
-  final bool obscureText;
-  final Widget? prefixIcon;
-  final Widget? suffixIcon;
-  final String? Function(String?)? validator;
-  final ValueChanged<String>? onChanged;
-  final TextInputAction textInputAction;
-  final bool enabled;
-  final int maxLines;
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_radius.dart';
+import '../../core/theme/app_shadows.dart';
 
-  const AppTextField({
+class AppCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final VoidCallback? onTap;
+  final Color? color;
+  final double? width;
+  final double? height;
+
+  const AppCard({
     super.key,
-    required this.controller,
-    required this.label,
-    this.hintText,
-    this.keyboardType = TextInputType.text,
-    this.obscureText = false,
-    this.prefixIcon,
-    this.suffixIcon,
-    this.validator,
-    this.onChanged,
-    this.textInputAction = TextInputAction.next,
-    this.enabled = true,
-    this.maxLines = 1,
+    required this.child,
+    this.padding,
+    this.onTap,
+    this.color,
+    this.width,
+    this.height,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      validator: validator,
-      onChanged: onChanged,
-      textInputAction: textInputAction,
-      enabled: enabled,
-      maxLines: obscureText ? 1 : maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hintText,
-        prefixIcon: prefixIcon,
-        suffixIcon: suffixIcon,
+    final card = Container(
+      width: width,
+      height: height,
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color ?? AppColors.surface,
+        borderRadius: AppRadius.large,
+        boxShadow: AppShadows.small,
+      ),
+      child: child,
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: AppRadius.large,
+        onTap: onTap,
+        child: card,
       ),
     );
   }

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../commons/widgets/app_card.dart';
+import '../../../../commons/widgets/app_text_field.dart';
+import '../../../../commons/widgets/primary_button.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../providers/auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -48,117 +54,102 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
 
-                const Text(
+                Text(
                   'Welcome Back 👋',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.display,
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
 
-                const Text(
-                  'Login to continue',
-                  style: TextStyle(
-                    color: Colors.grey,
-                  ),
+                Text(
+                  'Sign in to continue managing your finances.',
+                  style: AppTextStyles.bodySecondary,
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: AppSpacing.xxl),
 
-                TextFormField(
+                AppTextField(
                   controller: _emailController,
+                  label: 'Email',
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                  ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Email is required';
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email';
                     }
-
                     return null;
                   },
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
-                TextFormField(
+                AppTextField(
                   controller: _passwordController,
+                  label: 'Password',
                   obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Password is required';
+                      return 'Please enter your password';
                     }
-
                     return null;
                   },
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
 
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
-                    child: const Text("Forgot Password?"),
+                    onPressed: () {
+                      context.push('/forgot-password');
+                    },
+                    child: const Text('Forgot Password?'),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed:
-                    authState.isLoading ? null : _login,
-                    child: authState.isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text("Login"),
-                  ),
+                PrimaryButton(
+                  text: 'Login',
+                  isLoading: authState.isLoading,
+                  onPressed: _login,
                 ),
 
-                const Spacer(),
+                const SizedBox(height: AppSpacing.xl),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don't have an account?"),
-
+                    Text(
+                      "Don't have an account?",
+                      style: AppTextStyles.bodySecondary,
+                    ),
                     TextButton(
                       onPressed: () {
-                        // TODO: Navigate to Signup
+                        context.push('/signup');
                       },
-                      child: const Text("Sign Up"),
+                      child: const Text('Sign Up'),
                     ),
                   ],
                 ),
