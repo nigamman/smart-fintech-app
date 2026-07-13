@@ -46,6 +46,9 @@ dependencies:
   intl:
   uuid:
   equatable:
+  google_fonts:
+  gap:
+  lucide_icons:
 
 dev_dependencies:
   flutter_test:
