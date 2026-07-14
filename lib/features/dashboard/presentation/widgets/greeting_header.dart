@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 class GreetingHeader extends StatelessWidget {
@@ -19,18 +20,22 @@ class GreetingHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Good Morning 👋',
+                'Good Morning',
                 style: AppTextStyles.caption,
               ),
+
+              VSpace.xs,
+
               Text(
                 userName,
-                style: AppTextStyles.h2,
+                style: AppTextStyles.h1,
               ),
             ],
           ),
         ),
+
         const CircleAvatar(
-          radius: 22,
+          radius: 24,
           child: Icon(Icons.person_outline),
         ),
       ],

@@ -17,19 +17,24 @@ class BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      color: AppColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Safe to Spend Today',
-            style: AppTextStyles.caption,
+            style: AppTextStyles.caption.copyWith(
+              color: Colors.white70,
+            ),
           ),
 
           VSpace.sm,
 
           Text(
             '₹${safeToSpend.toStringAsFixed(0)}',
-            style: AppTextStyles.display,
+            style: AppTextStyles.display.copyWith(
+              color: Colors.white,
+            ),
           ),
 
           VSpace.xs,
@@ -50,13 +55,15 @@ class BalanceCard extends StatelessWidget {
             children: [
               Text(
                 'Total Balance',
-                style: AppTextStyles.bodySecondary,
+                style: AppTextStyles.bodySecondary.copyWith(
+                  color: Colors.white70,
+                ),
               ),
 
               Text(
                 '₹${totalBalance.toStringAsFixed(0)}',
                 style: AppTextStyles.title.copyWith(
-                  color: AppColors.primaryText,
+                  color: Colors.white,
                 ),
               ),
             ],

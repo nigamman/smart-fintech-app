@@ -1,57 +1,58 @@
 import 'package:flutter/material.dart';
-
-import '../../../../commons/widgets/app_card.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../commons/widgets/section_header.dart';
+import '../../../../commons/widgets/transaction_title.dart';
+import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../transaction/data/models/transaction_model.dart';
 
-class SummaryCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
+class RecentTransactions extends StatelessWidget {
+  final List<TransactionModel> transactions;
 
-  const SummaryCard({
+  const RecentTransactions({
     super.key,
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
+    required this.transactions,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: color.withValues(alpha: 0.12),
-              child: Icon(
-                icon,
-                size: 18,
-                color: color,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Recent Transactions',
+          actionText: 'See All',
+          onActionTap: () {},
+        ),
+
+        VSpace.md,
+
+        if (transactions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Center(
+              child: Text(
+                'No recent transactions yet.',
+                style: TextStyle(color: Colors.grey),
               ),
             ),
-
-            VSpace.md,
-
-            Text(
-              title,
-              style: AppTextStyles.caption,
+          )
+        else
+          ...transactions.map(
+            (tx) => TransactionTile(
+              title: tx.note != null && tx.note!.isNotEmpty ? tx.note! : _getCategoryName(tx.category),
+              category: _getCategoryName(tx.category),
+              amount: tx.amount,
+              date: tx.transactionDate,
+              type: tx.type,
             ),
-
-            VSpace.xs,
-
-            Text(
-              value,
-              style: AppTextStyles.title,
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
+  }
+
+  String _getCategoryName(dynamic category) {
+    final name = category.name;
+    if (name.isEmpty) return '';
+    return name[0].toUpperCase() + name.substring(1);
   }
 }

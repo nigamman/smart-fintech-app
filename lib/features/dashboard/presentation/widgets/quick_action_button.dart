@@ -25,11 +25,12 @@ class QuickActionButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.accent.withValues(alpha: 0.12),
+              radius: 28,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
               child: Icon(
                 icon,
-                color: AppColors.accent,
+                color: AppColors.primary,
+                size: 24,
               ),
             ),
 
@@ -37,8 +38,9 @@ class QuickActionButton extends StatelessWidget {
 
             Text(
               title,
-              style: AppTextStyles.caption,
-              textAlign: TextAlign.center,
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

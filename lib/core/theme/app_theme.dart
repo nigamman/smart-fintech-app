@@ -70,17 +70,22 @@ class AppTheme {
 
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: const BorderSide(color: AppColors.expense, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.primary,
+            width: 1.5,
+          ),
         ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
+          backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
           elevation: 0,
           minimumSize: const Size.fromHeight(56),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.large,
+          ),
           textStyle: AppTextStyles.button,
         ),
       ),
@@ -88,7 +93,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.large),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.large,
+        ),
       ),
     );
   }

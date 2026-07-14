@@ -22,15 +22,23 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: 58,
       child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.large,
+          ),
+        ),
         onPressed: isLoading ? null : onPressed,
         child: isLoading
             ? const SizedBox(
           width: 22,
           height: 22,
           child: CircularProgressIndicator(
-            strokeWidth: 2.5,
+            strokeWidth: 2,
             color: AppColors.white,
           ),
         )
@@ -39,10 +47,7 @@ class PrimaryButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(
-                icon,
-                size: 20,
-              ),
+              Icon(icon, size: 20),
               const SizedBox(width: 8),
             ],
             Text(

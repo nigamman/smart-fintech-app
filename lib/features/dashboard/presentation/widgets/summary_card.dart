@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../commons/widgets/app_card.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
@@ -24,9 +26,13 @@ class SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: color.withValues(alpha: 0.12),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
               child: Icon(
                 icon,
                 size: 18,
@@ -34,18 +40,20 @@ class SummaryCard extends StatelessWidget {
               ),
             ),
 
-            VSpace.md,
+            VSpace.lg,
 
             Text(
-              title,
-              style: AppTextStyles.caption,
+              title.toUpperCase(),
+              style: AppTextStyles.label.copyWith(
+                letterSpacing: 1.2,
+              ),
             ),
 
             VSpace.xs,
 
             Text(
               value,
-              style: AppTextStyles.title,
+              style: AppTextStyles.h3,
             ),
           ],
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_shadows.dart';
+import '../../core/theme/app_spacing.dart';
 
 class AppCard extends StatelessWidget {
   final Widget child;
@@ -24,26 +25,31 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
+    final widget = AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
       width: width,
       height: height,
-      padding: padding ?? const EdgeInsets.all(16),
+      padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: color ?? AppColors.surface,
         borderRadius: AppRadius.large,
+        border: Border.all(
+          color: AppColors.border,
+          width: 1,
+        ),
         boxShadow: AppShadows.small,
       ),
       child: child,
     );
 
-    if (onTap == null) return card;
+    if (onTap == null) return widget;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: AppRadius.large,
         onTap: onTap,
-        child: card,
+        child: widget,
       ),
     );
   }

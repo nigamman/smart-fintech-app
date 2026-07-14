@@ -4,13 +4,30 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
-//import '../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/auth/presentation/screens/signup_screen.dart';
 import '../features/auth/presentation/screens/splash_screen.dart';
 
+class GoRouterRefreshNotifier extends ChangeNotifier {
+  void refresh() {
+    notifyListeners();
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final refreshNotifier = GoRouterRefreshNotifier();
+
+  ref.listen(authStateProvider, (_, __) {
+    refreshNotifier.refresh();
+  });
+
+  ref.onDispose(() {
+    refreshNotifier.dispose();
+  });
+
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refreshNotifier,
 
     routes: [
       GoRoute(
@@ -33,25 +50,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
-      // GoRoute(
-      //   path: '/dashboard',
-      //   builder: (context, state) => const DashboardScreen(),
-      // ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardScreen(),
+      ),
     ],
 
     redirect: (context, state) async {
       final user = await ref.read(authRepositoryProvider).getCurrentUser();
 
-      final isAuthRoute =
-          state.matchedLocation == '/login' ||
-              state.matchedLocation == '/signup' ||
-              state.matchedLocation == '/forgot-password';
+      final location = state.matchedLocation;
 
-      if (user == null && !isAuthRoute) {
-        return '/login';
+      final isAuthRoute =
+          location == '/login' ||
+              location == '/signup' ||
+              location == '/forgot-password';
+
+      if (user == null) {
+        return isAuthRoute ? null : '/login';
       }
 
-      if (user != null && isAuthRoute) {
+      // User is logged in
+      if (location == '/') {
+        return '/dashboard';
+      }
+
+      if (isAuthRoute) {
         return '/dashboard';
       }
 
