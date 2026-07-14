@@ -16,10 +16,12 @@ import '../providers/transaction_providers.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? transaction;
+  final TransactionType initialType;
 
   const AddTransactionScreen({
     super.key,
     this.transaction,
+    this.initialType = TransactionType.expense,
   });
 
   @override
@@ -44,8 +46,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       text: tx != null ? tx.amount.toStringAsFixed(0) : '',
     );
     _noteController = TextEditingController(text: tx?.note ?? '');
-    _selectedType = tx?.type ?? TransactionType.expense;
-    _selectedCategory = tx?.category ?? TransactionCategory.food;
+    _selectedType = tx?.type ?? widget.initialType;
+    _selectedCategory = tx?.category ??
+        (_selectedType == TransactionType.income ? TransactionCategory.salary : TransactionCategory.food);
     _selectedDate = tx?.transactionDate ?? DateTime.now();
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import 'quick_action_button.dart';
 
@@ -12,7 +13,7 @@ class QuickActionsSection extends StatelessWidget {
         QuickActionButton(
           icon: Icons.remove_circle_outline,
           title: 'Expense',
-          onTap: () {},
+          onTap: () => context.push('/add-transaction?type=expense'),
         ),
 
         HSpace.md,
@@ -20,7 +21,7 @@ class QuickActionsSection extends StatelessWidget {
         QuickActionButton(
           icon: Icons.add_circle_outline,
           title: 'Income',
-          onTap: () {},
+          onTap: () => context.push('/add-transaction?type=income'),
         ),
 
         HSpace.md,
@@ -28,7 +29,7 @@ class QuickActionsSection extends StatelessWidget {
         QuickActionButton(
           icon: Icons.account_balance_wallet_outlined,
           title: 'Budget',
-          onTap: () {},
+          onTap: () => context.push('/budget'),
         ),
       ],
     );
