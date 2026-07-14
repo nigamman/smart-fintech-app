@@ -10,7 +10,9 @@ import '../widgets/balance_card.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/quick_action_section.dart';
 import '../widgets/recent_transaction.dart';
+import '../widgets/savings_goals_dashboard_widget.dart';
 import '../widgets/summary_section.dart';
+import '../../../savings_goal/presentation/providers/savings_goal_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -106,6 +108,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardDataProvider);
+    final goalsAsync = ref.watch(savingsGoalsStreamProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -166,12 +169,19 @@ class DashboardScreen extends ConsumerWidget {
                   SummarySection(
                     income: data.totalIncome,
                     expense: data.totalExpense,
-                    savingsGoal: data.monthlySavingsGoal,
+                    totalSaved: goalsAsync.maybeWhen(
+                      data: (goals) => goals.fold<double>(0.0, (sum, item) => sum + item.currentAmount),
+                      orElse: () => 0.0,
+                    ),
                   ),
 
                   VSpace.xl,
 
                   const QuickActionsSection(),
+
+                  VSpace.xl,
+
+                  const SavingsGoalsDashboardWidget(),
 
                   VSpace.xl,
 

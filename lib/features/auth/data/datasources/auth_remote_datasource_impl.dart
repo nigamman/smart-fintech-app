@@ -16,28 +16,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel?> getCurrentUser() async {
-    print('STEP 1');
 
     final firebaseUser = auth.currentUser;
 
-    print('STEP 2: ${firebaseUser?.uid}');
-
     if (firebaseUser == null) return null;
-
-    print('STEP 3');
 
     final snapshot = await firestore
         .collection(FirestoreCollections.users)
         .doc(firebaseUser.uid)
         .get();
 
-    print('STEP 4');
-
-    print(snapshot.exists);
-
     if (!snapshot.exists) return null;
-
-    print('STEP 5');
 
     return UserModel.fromJson(snapshot.data()!);
   }

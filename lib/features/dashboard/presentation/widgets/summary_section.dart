@@ -7,13 +7,13 @@ import 'summary_card.dart';
 class SummarySection extends StatelessWidget {
   final double income;
   final double expense;
-  final double savingsGoal;
+  final double totalSaved;
 
   const SummarySection({
     super.key,
     required this.income,
     required this.expense,
-    required this.savingsGoal,
+    required this.totalSaved,
   });
 
   @override
@@ -39,8 +39,8 @@ class SummarySection extends StatelessWidget {
         HSpace.md,
 
         SummaryCard(
-          title: 'Savings',
-          value: '₹${savingsGoal.toStringAsFixed(0)}',
+          title: 'Total Saved',
+          value: '₹${totalSaved.toStringAsFixed(0)}',
           icon: Icons.savings_outlined,
           color: AppColors.accent,
         ),

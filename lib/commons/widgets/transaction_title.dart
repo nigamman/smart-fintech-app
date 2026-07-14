@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 
 import '../../core/enums/transaction_type.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 
 class TransactionTile extends StatelessWidget {

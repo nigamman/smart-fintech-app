@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../commons/widgets/section_header.dart';
 import '../../../../commons/widgets/transaction_title.dart';
 import '../../../../core/enums/transaction_category.dart';
-import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../transaction/data/models/transaction_model.dart';
 

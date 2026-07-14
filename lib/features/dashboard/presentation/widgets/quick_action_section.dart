@@ -31,6 +31,14 @@ class QuickActionsSection extends StatelessWidget {
           title: 'Budget',
           onTap: () => context.push('/budget'),
         ),
+
+        HSpace.md,
+
+        QuickActionButton(
+          icon: Icons.analytics_outlined,
+          title: 'Analytics',
+          onTap: () => context.push('/analytics'),
+        ),
       ],
     );
   }

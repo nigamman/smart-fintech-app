@@ -14,6 +14,10 @@ import '../features/budget/domain/entities/budget.dart';
 import '../features/budget/presentation/screens/budget_screen.dart';
 import '../features/budget/presentation/screens/add_budget_screen.dart';
 import '../core/enums/transaction_type.dart';
+import '../features/savings_goal/domain/entities/savings_goal.dart';
+import '../features/savings_goal/presentation/screens/savings_goal_list_screen.dart';
+import '../features/savings_goal/presentation/screens/add_savings_goal_screen.dart';
+import '../features/analytics/presentation/screens/analytics_screen.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
   void refresh() {
@@ -93,6 +97,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final budget = state.extra as Budget?;
           return AddBudgetScreen(budget: budget);
         },
+      ),
+
+      GoRoute(
+        path: '/savings-goals',
+        builder: (context, state) => const SavingsGoalListScreen(),
+      ),
+
+      GoRoute(
+        path: '/add-savings-goal',
+        builder: (context, state) {
+          final goal = state.extra as SavingsGoal?;
+          return AddSavingsGoalScreen(savingsGoal: goal);
+        },
+      ),
+
+      GoRoute(
+        path: '/analytics',
+        builder: (context, state) => const AnalyticsScreen(),
       ),
     ],
 
