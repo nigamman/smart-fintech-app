@@ -5,6 +5,8 @@ abstract class AuthRemoteDataSource {
 
   Stream<UserModel?> authStateChanges();
 
+  Future<void> updateProfile(UserModel user);
+
   Future<UserModel> signUp({
     required String name,
     required String email,

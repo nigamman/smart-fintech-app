@@ -176,6 +176,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         title: const Text('Transactions'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.calendar_today_rounded),
+            tooltip: 'Calendar View',
+            onPressed: () => context.push('/calendar'),
+          ),
+          IconButton(
             icon: Icon(
               Icons.category_outlined,
               color: filters.category != null ? AppColors.accent : null,

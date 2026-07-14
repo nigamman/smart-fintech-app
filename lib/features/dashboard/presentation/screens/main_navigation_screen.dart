@@ -1,0 +1,226 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import 'home_screen.dart';
+import '../../../transaction/presentation/screens/activity_screen.dart';
+import '../../../budget/presentation/screens/planning_screen.dart';
+import '../../../analytics/presentation/screens/insights_screen.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
+
+final mainNavigationIndexProvider = StateProvider<int>((ref) => 0);
+
+class MainNavigationScreen extends ConsumerStatefulWidget {
+  const MainNavigationScreen({super.key});
+
+  @override
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    ActivityScreen(),
+    PlanningScreen(),
+    InsightsScreen(),
+    SettingsScreen(),
+  ];
+
+  void _showQuickActions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Quick Actions',
+                  style: AppTextStyles.h3.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildActionTile(
+                  context,
+                  icon: Icons.remove_circle_outline_rounded,
+                  color: AppColors.expense,
+                  title: 'Add Expense',
+                  subtitle: 'Record an outgoing payment or purchase',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/add-transaction?type=expense');
+                  },
+                ),
+                _buildActionTile(
+                  context,
+                  icon: Icons.add_circle_outline_rounded,
+                  color: AppColors.income,
+                  title: 'Add Income',
+                  subtitle: 'Log earnings, salary, or side income',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/add-transaction?type=income');
+                  },
+                ),
+                _buildActionTile(
+                  context,
+                  icon: Icons.track_changes_rounded,
+                  color: Colors.amber,
+                  title: 'Create Goal',
+                  subtitle: 'Set and track targeted savings goals',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/add-savings-goal');
+                  },
+                ),
+                _buildActionTile(
+                  context,
+                  icon: Icons.calendar_today_rounded,
+                  color: Colors.blueAccent,
+                  title: 'Add Bill / Sub',
+                  subtitle: 'Log recurring bill cycles or subscriptions',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/add-subscription');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionTile(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        splashColor: color.withValues(alpha: 0.1),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.12),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          title,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTextStyles.caption.copyWith(
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+          ),
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedIndex = ref.watch(mainNavigationIndexProvider);
+
+    return Scaffold(
+      body: IndexedStack(
+        index: selectedIndex,
+        children: _screens,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showQuickActions(context),
+        backgroundColor: AppColors.accent,
+        foregroundColor: isDark ? const Color(0xFF020617) : Colors.white,
+        shape: const CircleBorder(),
+        elevation: 4,
+        child: const Icon(Icons.add_rounded, size: 30),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: selectedIndex,
+          onTap: (index) {
+            ref.read(mainNavigationIndexProvider.notifier).state = index;
+          },
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: isDark ? const Color(0xFF090D16) : Colors.white,
+          selectedItemColor: AppColors.accent,
+          unselectedItemColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+          selectedLabelStyle: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, fontSize: 10),
+          unselectedLabelStyle: AppTextStyles.caption.copyWith(fontSize: 10),
+          elevation: 0,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long_outlined),
+              activeIcon: Icon(Icons.receipt_long_rounded),
+              label: 'Activity',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.account_balance_wallet_outlined),
+              activeIcon: Icon(Icons.account_balance_wallet_rounded),
+              label: 'Planning',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_outlined),
+              activeIcon: Icon(Icons.analytics_rounded),
+              label: 'Insights',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings_rounded),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

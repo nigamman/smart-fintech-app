@@ -8,38 +8,59 @@ class QuickActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        QuickActionButton(
-          icon: Icons.remove_circle_outline,
-          title: 'Expense',
-          onTap: () => context.push('/add-transaction?type=expense'),
-        ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          QuickActionButton(
+            icon: Icons.remove_circle_outline,
+            title: 'Expense',
+            onTap: () => context.push('/add-transaction?type=expense'),
+          ),
 
-        HSpace.md,
+          const SizedBox(width: 10),
 
-        QuickActionButton(
-          icon: Icons.add_circle_outline,
-          title: 'Income',
-          onTap: () => context.push('/add-transaction?type=income'),
-        ),
+          QuickActionButton(
+            icon: Icons.add_circle_outline,
+            title: 'Income',
+            onTap: () => context.push('/add-transaction?type=income'),
+          ),
 
-        HSpace.md,
+          const SizedBox(width: 10),
 
-        QuickActionButton(
-          icon: Icons.account_balance_wallet_outlined,
-          title: 'Budget',
-          onTap: () => context.push('/budget'),
-        ),
+          QuickActionButton(
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'Budget',
+            onTap: () => context.push('/budget'),
+          ),
 
-        HSpace.md,
+          const SizedBox(width: 10),
 
-        QuickActionButton(
-          icon: Icons.analytics_outlined,
-          title: 'Analytics',
-          onTap: () => context.push('/analytics'),
-        ),
-      ],
+          QuickActionButton(
+            icon: Icons.analytics_outlined,
+            title: 'Analytics',
+            onTap: () => context.push('/analytics'),
+          ),
+
+          const SizedBox(width: 10),
+
+          QuickActionButton(
+            icon: Icons.calendar_month_outlined,
+            title: 'Calendar',
+            onTap: () => context.push('/calendar'),
+          ),
+
+          const SizedBox(width: 10),
+
+          QuickActionButton(
+            icon: Icons.card_membership_outlined,
+            title: 'Subs',
+            onTap: () => context.push('/subscriptions'),
+          ),
+        ],
+      ),
     );
   }
 }

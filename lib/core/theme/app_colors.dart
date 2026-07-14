@@ -4,26 +4,26 @@ class AppColors {
   const AppColors._();
 
   // Brand
-  static const Color primary = Color(0xFF5D4037);
-  static const Color primaryDark = Color(0xFF3E2723);
-  static const Color accent = Color(0xFFC08A5B);
+  static const Color primary = Color(0xFF0F172A);
+  static const Color primaryDark = Color(0xFF020617);
+  static const Color accent = Color(0xFF10B981);
 
   // Background
-  static const Color background = Color(0xFFF6F2EB);
-  static const Color surface = Color(0xFFFFFDF9);
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color surface = Color(0xFFFFFFFF);
 
   // Text
-  static const Color primaryText = Color(0xFF2F241E);
-  static const Color secondaryText = Color(0xFF7C6E62);
-  static const Color disabledText = Color(0xFFB6ACA2);
+  static const Color primaryText = Color(0xFF0F172A);
+  static const Color secondaryText = Color(0xFF475569);
+  static const Color disabledText = Color(0xFF94A3B8);
 
   // Border
-  static const Color border = Color(0xFFE7DED2);
+  static const Color border = Color(0xFFE2E8F0);
 
   // Status
-  static const Color income = Color(0xFF5A8F6A);
-  static const Color expense = Color(0xFFC46A5A);
-  static const Color warning = Color(0xFFE3A857);
+  static const Color income = Color(0xFF10B981);
+  static const Color expense = Color(0xFFEF4444);
+  static const Color warning = Color(0xFFF59E0B);
 
   // Utility
   static const Color white = Color(0xFFFFFFFF);

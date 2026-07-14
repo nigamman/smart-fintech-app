@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../commons/widgets/skeleton_loader.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../savings_goal/presentation/providers/savings_goal_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
 class SavingsGoalsDashboardWidget extends ConsumerWidget {
   const SavingsGoalsDashboardWidget({super.key});
@@ -15,9 +17,18 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goalsAsync = ref.watch(savingsGoalsStreamProvider);
+    final currency = ref.watch(preferencesProvider).currency;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return goalsAsync.when(
-      loading: () => const SizedBox(height: 50, child: Center(child: CircularProgressIndicator())),
+      loading: () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonLoader(width: 120, height: 20),
+          VSpace.sm,
+          const SkeletonLoader.card(height: 125),
+        ],
+      ),
       error: (err, stack) => Text('Error loading goals: $err'),
       data: (goals) {
         if (goals.isEmpty) {
@@ -28,9 +39,9 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: isDark ? const Color(0xFF131B2E) : Colors.white,
                 borderRadius: AppRadius.large,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,9 +102,9 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
                     child: Container(
                       width: 200,
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: isDark ? const Color(0xFF131B2E) : Colors.white,
                         borderRadius: AppRadius.medium,
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
                       ),
                       padding: const EdgeInsets.all(AppSpacing.md),
                       child: Column(
@@ -113,13 +124,13 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    '₹${goal.currentAmount.toStringAsFixed(0)} / ₹${goal.targetAmount.toStringAsFixed(0)}',
+                                    '$currency${goal.currentAmount.toStringAsFixed(0)} / $currency${goal.targetAmount.toStringAsFixed(0)}',
                                     style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                   Text(
                                     '$pctText%',
                                     style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.primary,
+                                      color: AppColors.accent,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -130,8 +141,8 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
                                 borderRadius: AppRadius.small,
                                 child: LinearProgressIndicator(
                                   value: pct > 1.0 ? 1.0 : pct,
-                                  backgroundColor: AppColors.border,
-                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                  backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
                                   minHeight: 6,
                                 ),
                               ),

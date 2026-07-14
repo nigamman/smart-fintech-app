@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/enums/transaction_type.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../features/settings/presentation/providers/settings_providers.dart';
 
-class TransactionTile extends StatelessWidget {
+class TransactionTile extends ConsumerWidget {
   final String title;
   final String category;
   final double amount;
@@ -24,8 +26,9 @@ class TransactionTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isIncome = type == TransactionType.income;
+    final currency = ref.watch(preferencesProvider).currency;
 
     return ListTile(
       onTap: onTap,
@@ -38,11 +41,12 @@ class TransactionTile extends StatelessWidget {
 
         child: Icon(
           isIncome
-              ? Icons.arrow_downward_rounded
-              : Icons.arrow_upward_rounded,
+              ? Icons.south_west_rounded
+              : Icons.north_east_rounded,
           color: isIncome
               ? AppColors.income
               : AppColors.expense,
+          size: 18,
         ),
       ),
 
@@ -57,7 +61,7 @@ class TransactionTile extends StatelessWidget {
       ),
 
       trailing: Text(
-        '${isIncome ? '+' : '-'}₹${amount.toStringAsFixed(0)}',
+        '${isIncome ? '+' : '-'}$currency${amount.toStringAsFixed(0)}',
         style: AppTextStyles.body.copyWith(
           color: isIncome
               ? AppColors.income

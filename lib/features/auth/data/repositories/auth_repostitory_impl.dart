@@ -1,6 +1,7 @@
 import '../../domain/entities/app_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
@@ -17,6 +18,19 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Stream<AppUser?> authStateChanges() {
     return remoteDataSource.authStateChanges();
+  }
+
+  @override
+  Future<void> updateProfile(AppUser user) async {
+    final model = UserModel(
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      monthlyIncome: user.monthlyIncome,
+      monthlySavingsGoal: user.monthlySavingsGoal,
+      createdAt: user.createdAt,
+    );
+    await remoteDataSource.updateProfile(model);
   }
 
   @override

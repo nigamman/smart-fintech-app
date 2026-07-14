@@ -49,6 +49,9 @@ dependencies:
   google_fonts:
   gap:
   lucide_icons:
+  csv: ^8.0.0
+  pdf: ^3.12.0
+  share_plus: ^13.2.0
 
 dev_dependencies:
   flutter_test:

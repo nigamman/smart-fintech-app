@@ -48,6 +48,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
+  Future<void> updateProfile(UserModel user) async {
+    await firestore
+        .collection(FirestoreCollections.users)
+        .doc(user.id)
+        .set(user.toJson(), SetOptions(merge: true));
+  }
+
+  @override
   Future<UserModel> signUp({
     required String name,
     required String email,

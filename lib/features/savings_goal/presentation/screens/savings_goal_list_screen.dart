@@ -11,6 +11,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/savings_goal.dart';
 import '../providers/savings_goal_providers.dart';
+import '../../../../commons/widgets/skeleton_loader.dart';
 
 class SavingsGoalListScreen extends ConsumerWidget {
   const SavingsGoalListScreen({super.key});
@@ -102,7 +103,16 @@ class SavingsGoalListScreen extends ConsumerWidget {
         title: const Text('Savings Goals'),
       ),
       body: goalsAsync.when(
-        loading: () => const LoadingIndicator(),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            const SkeletonLoader.card(height: 140),
+            VSpace.md,
+            const SkeletonLoader.card(height: 140),
+            VSpace.md,
+            const SkeletonLoader.card(height: 140),
+          ],
+        ),
         error: (err, stack) => Center(
           child: Text('Error loading savings goals: $err'),
         ),

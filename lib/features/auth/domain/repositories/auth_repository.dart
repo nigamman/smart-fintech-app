@@ -7,6 +7,8 @@ abstract class AuthRepository {
   /// Listen to authentication state changes.
   Stream<AppUser?> authStateChanges();
 
+  Future<void> updateProfile(AppUser user);
+
   /// Create a new account.
   Future<AppUser> signUp({
     required String name,

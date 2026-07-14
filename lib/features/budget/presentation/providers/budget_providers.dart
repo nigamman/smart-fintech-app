@@ -6,6 +6,7 @@ import '../../../../core/enums/transaction_type.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../data/datasources/budget_remote_datasource.dart';
 import '../../data/datasources/budget_remote_datasource_impl.dart';
 import '../../data/repositories/budget_repository_impl.dart';
@@ -76,6 +77,7 @@ class MonthlyBudgetProgress {
 final budgetProgressProvider = Provider<AsyncValue<MonthlyBudgetProgress>>((ref) {
   final budgetsAsync = ref.watch(budgetsStreamProvider);
   final transactionsAsync = ref.watch(transactionsStreamProvider);
+  final userAsync = ref.watch(userProfileStreamProvider);
 
   return budgetsAsync.when(
     loading: () => const AsyncLoading(),
@@ -85,57 +87,67 @@ final budgetProgressProvider = Provider<AsyncValue<MonthlyBudgetProgress>>((ref)
         loading: () => const AsyncLoading(),
         error: (err, stack) => AsyncError(err, stack),
         data: (transactions) {
-          final now = DateTime.now();
-          // Filter current month's expenses
-          final currentMonthExpenses = transactions.where((tx) {
-            return tx.type == TransactionType.expense &&
-                tx.transactionDate.month == now.month &&
-                tx.transactionDate.year == now.year;
-          }).toList();
+          return userAsync.when(
+            loading: () => const AsyncLoading(),
+            error: (err, stack) => AsyncError(err, stack),
+            data: (user) {
+              final now = DateTime.now();
+              // Filter current month's expenses
+              final currentMonthExpenses = transactions.where((tx) {
+                return tx.type == TransactionType.expense &&
+                    tx.transactionDate.month == now.month &&
+                    tx.transactionDate.year == now.year;
+              }).toList();
 
-          // Calculate total spent
-          double totalSpent = 0.0;
-          for (final tx in currentMonthExpenses) {
-            totalSpent += tx.amount;
-          }
+              // Calculate total spent
+              double totalSpent = 0.0;
+              for (final tx in currentMonthExpenses) {
+                totalSpent += tx.amount;
+              }
 
-          // Find overall monthly budget (where category == null)
-          final overallBudget = budgets.cast<Budget?>().firstWhere(
-                (b) => b?.category == null,
-                orElse: () => null,
-              );
+              // Find overall monthly budget (where category == null)
+              final overallBudget = budgets.cast<Budget?>().firstWhere(
+                    (b) => b?.category == null,
+                    orElse: () => null,
+                  );
 
-          final totalLimit = overallBudget?.limitAmount ?? 0.0;
+              final fallbackLimit = user != null
+                  ? (user.monthlyIncome - user.monthlySavingsGoal).clamp(0.0, double.infinity)
+                  : 0.0;
 
-          // Group expenses by category
-          final categoryExpenses = <TransactionCategory, double>{};
-          for (final tx in currentMonthExpenses) {
-            categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + tx.amount;
-          }
+              final totalLimit = fallbackLimit;
 
-          // Build category budget progress list
-          final categoryProgresses = <CategoryBudgetProgress>[];
-          for (final budget in budgets) {
-            if (budget.category != null) {
-              final spent = categoryExpenses[budget.category!] ?? 0.0;
-              categoryProgresses.add(
-                CategoryBudgetProgress(
-                  budgetId: budget.id,
-                  category: budget.category!,
-                  limit: budget.limitAmount,
-                  spent: spent,
+              // Group expenses by category
+              final categoryExpenses = <TransactionCategory, double>{};
+              for (final tx in currentMonthExpenses) {
+                categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + tx.amount;
+              }
+
+              // Build category budget progress list
+              final categoryProgresses = <CategoryBudgetProgress>[];
+              for (final budget in budgets) {
+                if (budget.category != null) {
+                  final spent = categoryExpenses[budget.category!] ?? 0.0;
+                  categoryProgresses.add(
+                    CategoryBudgetProgress(
+                      budgetId: budget.id,
+                      category: budget.category!,
+                      limit: budget.limitAmount,
+                      spent: spent,
+                    ),
+                  );
+                }
+              }
+
+              return AsyncData(
+                MonthlyBudgetProgress(
+                  monthlyBudget: overallBudget,
+                  totalLimit: totalLimit,
+                  totalSpent: totalSpent,
+                  categoryProgresses: categoryProgresses,
                 ),
               );
-            }
-          }
-
-          return AsyncData(
-            MonthlyBudgetProgress(
-              monthlyBudget: overallBudget,
-              totalLimit: totalLimit,
-              totalSpent: totalSpent,
-              categoryProgresses: categoryProgresses,
-            ),
+            },
           );
         },
       );
