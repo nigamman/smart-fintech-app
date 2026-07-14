@@ -7,6 +7,9 @@ import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/auth/presentation/screens/signup_screen.dart';
 import '../features/auth/presentation/screens/splash_screen.dart';
+import '../features/transaction/domain/entities/transaction.dart';
+import '../features/transaction/presentation/screens/add_transaction_screen.dart';
+import '../features/transaction/presentation/screens/transaction_list_screen.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
   void refresh() {
@@ -53,6 +56,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+
+      GoRoute(
+        path: '/transactions',
+        builder: (context, state) => const TransactionListScreen(),
+      ),
+
+      GoRoute(
+        path: '/add-transaction',
+        builder: (context, state) {
+          final transaction = state.extra as Transaction?;
+          return AddTransactionScreen(transaction: transaction);
+        },
       ),
     ],
 
