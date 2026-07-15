@@ -275,6 +275,8 @@ class DashboardScreen extends ConsumerWidget {
                   BalanceCard(
                     safeToSpend: data.safeToSpend,
                     totalBalance: data.totalBalance,
+                    monthlyIncome: data.monthlyIncome,
+                    totalExpense: data.totalExpense,
                   ),
 
                   VSpace.xl,

@@ -13,15 +13,18 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/transaction_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? transaction;
   final TransactionType initialType;
+  final TransactionCategory? initialCategory;
 
   const AddTransactionScreen({
     super.key,
     this.transaction,
     this.initialType = TransactionType.expense,
+    this.initialCategory,
   });
 
   @override
@@ -48,6 +51,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     _noteController = TextEditingController(text: tx?.note ?? '');
     _selectedType = tx?.type ?? widget.initialType;
     _selectedCategory = tx?.category ??
+        widget.initialCategory ??
         (_selectedType == TransactionType.income ? TransactionCategory.salary : TransactionCategory.food);
     _selectedDate = tx?.transactionDate ?? DateTime.now();
   }
@@ -212,6 +216,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final controllerState = ref.watch(transactionControllerProvider);
     final isLoading = controllerState.isLoading;
 
+    final preferences = ref.watch(preferencesProvider);
+    final currency = preferences.currency;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditMode ? 'Edit Transaction' : 'Add Transaction'),
@@ -250,7 +257,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '₹',
+                            currency,
                             style: AppTextStyles.display.copyWith(color: AppColors.primary),
                           ),
                           const SizedBox(width: 4),
@@ -258,6 +265,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             width: 200,
                             child: TextFormField(
                               controller: _amountController,
+                              autofocus: !_isEditMode,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               textAlign: TextAlign.center,
                               style: AppTextStyles.display,
@@ -494,16 +502,21 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
                 VSpace.xl,
 
-                // Note Field
+                // Subcategory Field
                 Text(
-                  'NOTE',
+                  'SUBCATEGORY',
                   style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
                 ),
                 VSpace.md,
                 AppTextField(
                   controller: _noteController,
-                  label: 'Add a description...',
-                  maxLines: 3,
+                  label: 'e.g. Swiggy, Coffee, Rent',
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter a subcategory (e.g. Swiggy, Coffee)';
+                    }
+                    return null;
+                  },
                 ),
                 VSpace.xxl,
 

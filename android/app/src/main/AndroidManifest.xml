@@ -24,7 +24,54 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep link configuration -->
+            <intent-filter android:label="fintrack">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fintrack" android:host="add-transaction" />
+            </intent-filter>
+            <intent-filter android:label="fintrack">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fintrack" android:host="dashboard" />
+            </intent-filter>
         </activity>
+
+        <!-- AppWidget Provider Receiver (Medium) -->
+        <receiver android:name="com.example.fintech_app.SafeToSpendWidgetProvider" 
+                  android:exported="true"
+                  android:label="Safe to Spend (Medium)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/safe_to_spend_widget_info" />
+        </receiver>
+
+        <!-- AppWidget Provider Receiver (Small) -->
+        <receiver android:name="com.example.fintech_app.SafeToSpendSmallWidgetProvider" 
+                  android:exported="true"
+                  android:label="Safe to Spend (Small)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/safe_to_spend_small_widget_info" />
+        </receiver>
+
+        <!-- HomeWidget Background Receiver & Service (required for interactivity) -->
+        <receiver android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.BACKGROUND" />
+            </intent-filter>
+        </receiver>
+        <service android:name="es.antonborri.home_widget.HomeWidgetBackgroundService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true"/>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../core/enums/transaction_category.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
@@ -86,16 +87,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final initialType = initialTypeStr == 'income'
               ? TransactionType.income
               : TransactionType.expense;
+          final categoryStr = state.uri.queryParameters['category'];
+          final initialCategory = categoryStr != null
+              ? TransactionCategory.values.firstWhere(
+                  (e) => e.name == categoryStr,
+                  orElse: () => TransactionCategory.food,
+                )
+              : null;
           return AddTransactionScreen(
             transaction: transaction,
             initialType: initialType,
+            initialCategory: initialCategory,
           );
         },
       ),
 
       GoRoute(
         path: '/budget',
-        builder: (context, state) => const MainNavigationScreen(),
+        builder: (context, state) => const BudgetScreen(),
       ),
 
       GoRoute(

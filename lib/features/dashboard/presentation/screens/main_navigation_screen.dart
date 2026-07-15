@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
+import 'package:home_widget/home_widget.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -28,6 +30,53 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     InsightsScreen(),
     SettingsScreen(),
   ];
+
+  StreamSubscription<Uri?>? _widgetClickSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Check if the app was initially launched from a widget click
+    HomeWidget.initiallyLaunchedFromHomeWidget().then((Uri? uri) {
+      if (uri != null) {
+        _handleWidgetUri(uri);
+      }
+    });
+
+    // Listen to incoming clicks when app is already running
+    _widgetClickSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
+      if (uri != null) {
+        _handleWidgetUri(uri);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _widgetClickSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _handleWidgetUri(Uri uri) {
+    debugPrint('Widget click intercepted in Flutter: $uri');
+    if (uri.scheme == 'fintrack') {
+      if (uri.host == 'add-transaction') {
+        final category = uri.queryParameters['category'];
+        final type = uri.queryParameters['type'] ?? 'expense';
+        
+        // Push the Add Transaction screen
+        String path = '/add-transaction?type=$type';
+        if (category != null) {
+          path += '&category=$category';
+        }
+        context.push(path);
+      } else if (uri.host == 'dashboard') {
+        // Switch main tab to Home
+        ref.read(mainNavigationIndexProvider.notifier).state = 0;
+      }
+    }
+  }
 
   void _showQuickActions(BuildContext context) {
     showModalBottomSheet(

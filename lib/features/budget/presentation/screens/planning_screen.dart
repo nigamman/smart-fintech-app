@@ -475,24 +475,33 @@ class PlanningScreen extends ConsumerWidget {
           children: [
             // 1. Budget Card Section
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Monthly Budget',
-                  style: AppTextStyles.title.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Monthly Budget',
+                      style: AppTextStyles.title.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: AppColors.accent,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _showBudgetInfoDialog(context),
+                      tooltip: 'About monthly budget limit calculation',
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                IconButton(
-                  icon: const Icon(
-                    Icons.info_outline_rounded,
-                    size: 16,
-                    color: AppColors.accent,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: () => _showBudgetInfoDialog(context),
-                  tooltip: 'About monthly budget limit calculation',
+                TextButton(
+                  onPressed: () => context.push('/budget'),
+                  child: const Text('Manage Budgets'),
                 ),
               ],
             ),
@@ -503,63 +512,67 @@ class PlanningScreen extends ConsumerWidget {
               data: (progress) {
                 final pct = progress.progressPercentage;
                 final pctText = (pct * 100).toStringAsFixed(0);
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                    borderRadius: AppRadius.large,
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$currency${progress.totalSpent.toStringAsFixed(0)} / $currency${progress.totalLimit.toStringAsFixed(0)}',
-                                style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              VSpace.xs,
-                              Text('Spent of monthly limit', style: AppTextStyles.caption),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: progress.isExceeded
-                                  ? AppColors.expense.withValues(alpha: 0.1)
-                                  : AppColors.accent.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '$pctText%',
-                              style: AppTextStyles.caption.copyWith(
-                                color: progress.isExceeded ? AppColors.expense : AppColors.accent,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                return InkWell(
+                  onTap: () => context.push('/budget'),
+                  borderRadius: AppRadius.large,
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF131B2E) : Colors.white,
+                      borderRadius: AppRadius.large,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                       ),
-                      VSpace.md,
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: pct > 1.0 ? 1.0 : pct,
-                          minHeight: 6,
-                          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            progress.isExceeded ? AppColors.expense : AppColors.accent,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$currency${progress.totalSpent.toStringAsFixed(0)} / $currency${progress.totalLimit.toStringAsFixed(0)}',
+                                  style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                VSpace.xs,
+                                Text('Spent of monthly limit', style: AppTextStyles.caption),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: progress.isExceeded
+                                    ? AppColors.expense.withValues(alpha: 0.1)
+                                    : AppColors.accent.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$pctText%',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: progress.isExceeded ? AppColors.expense : AppColors.accent,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        VSpace.md,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: pct > 1.0 ? 1.0 : pct,
+                            minHeight: 6,
+                            backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              progress.isExceeded ? AppColors.expense : AppColors.accent,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

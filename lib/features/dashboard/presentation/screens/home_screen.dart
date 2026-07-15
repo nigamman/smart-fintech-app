@@ -175,6 +175,8 @@ class HomeScreen extends ConsumerWidget {
                     BalanceCard(
                       safeToSpend: dashboardData.safeToSpend,
                       totalBalance: dashboardData.totalBalance,
+                      monthlyIncome: dashboardData.monthlyIncome,
+                      totalExpense: dashboardData.totalExpense,
                     ),
                     VSpace.xl,
 
