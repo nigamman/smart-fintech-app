@@ -10,6 +10,10 @@ import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
 class SafeToSpendWidgetProvider : HomeWidgetProvider() {
+    private fun cleanLabel(label: String): String {
+        return label.replace(Regex("^[^a-zA-Z0-9]*"), "").trim()
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -31,9 +35,9 @@ class SafeToSpendWidgetProvider : HomeWidgetProvider() {
 
                 // Get dynamic top categories from Flutter
                 val topCat1Name = widgetData.getString("top_category_1_name", "food") ?: "food"
-                val topCat1Label = widgetData.getString("top_category_1_label", "Food") ?: "Food"
+                val topCat1Label = cleanLabel(widgetData.getString("top_category_1_label", "Food") ?: "Food")
                 val topCat2Name = widgetData.getString("top_category_2_name", "shopping") ?: "shopping"
-                val topCat2Label = widgetData.getString("top_category_2_label", "Shopping") ?: "Shopping"
+                val topCat2Label = cleanLabel(widgetData.getString("top_category_2_label", "Shopping") ?: "Shopping")
 
                 // Set dynamic button labels
                 setTextViewText(R.id.btn_top_cat_1, topCat1Label)
@@ -58,7 +62,7 @@ class SafeToSpendWidgetProvider : HomeWidgetProvider() {
                 // Fixed Coffee background log button (does not open the app)
                 val coffeeIntent = HomeWidgetBackgroundIntent.getBroadcast(
                     context,
-                    Uri.parse("fintrack://add_expense?amount=10&category=food&note=Coffee")
+                    Uri.parse("fintrack://add_expense?amount=80&category=food&note=Coffee")
                 )
                 setOnClickPendingIntent(R.id.btn_coffee, coffeeIntent)
 

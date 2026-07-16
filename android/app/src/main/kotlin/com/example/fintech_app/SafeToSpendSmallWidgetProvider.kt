@@ -22,7 +22,7 @@ class SafeToSpendSmallWidgetProvider : HomeWidgetProvider() {
                 val remainingDaysText = widgetData.getString("remaining_days_text", "-- days remaining") ?: "-- days remaining"
 
                 // Update views
-                setTextViewText(R.id.widget_title, "Safe to Spend")
+                setTextViewText(R.id.widget_title, "Safe Today")
                 setTextViewText(R.id.widget_safe_to_spend, safeToSpendText)
                 setTextViewText(R.id.widget_remaining_days, remainingDaysText)
 
