@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,8 +43,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   late bool _isSplit;
   late List<String> _splitFriends;
   late bool _isSplitPaid;
+  late bool _isOthersSelected;
   bool _isAddingFriend = false;
   final TextEditingController _newFriendController = TextEditingController();
+  
+  late final ScrollController _categoryScrollController;
+  late final ScrollController _subcategoryScrollController;
+  Timer? _scrollHintTimer;
 
   bool get _isEditMode => widget.transaction != null;
 
@@ -51,9 +57,54 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return NumberFormat('#,##0', 'en_US').format(val.abs());
   }
 
+  void _triggerScrollHint() {
+    if (!mounted) return;
+
+    if (_categoryScrollController.hasClients) {
+      _categoryScrollController.animateTo(
+        45.0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (!mounted) return;
+          if (_categoryScrollController.hasClients) {
+            _categoryScrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      });
+    }
+
+    if (_subcategoryScrollController.hasClients) {
+      _subcategoryScrollController.animateTo(
+        40.0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (!mounted) return;
+          if (_subcategoryScrollController.hasClients) {
+            _subcategoryScrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _categoryScrollController = ScrollController();
+    _subcategoryScrollController = ScrollController();
+    
     final tx = widget.transaction;
     _amountController = TextEditingController(
       text: tx != null ? tx.amount.toStringAsFixed(0) : '',
@@ -73,13 +124,34 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _splitFriends = ['Aakash Kumar', 'Priya Sharma'];
     }
     _isSplitPaid = tx?.isSplitPaid ?? false;
+
+    final txNote = tx?.note ?? '';
+    final defaultSubs = _getSubcategories(_selectedCategory);
+    if (txNote.isNotEmpty && !defaultSubs.any((s) => s.toLowerCase() == txNote.toLowerCase())) {
+      _isOthersSelected = true;
+    } else {
+      _isOthersSelected = false;
+    }
+
+    // Run initial peek scroll hint animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 800), _triggerScrollHint);
+    });
+
+    // Setup periodic repeat peek scroll hint animation (every 8 seconds)
+    _scrollHintTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _triggerScrollHint();
+    });
   }
 
   @override
   void dispose() {
+    _scrollHintTimer?.cancel();
     _amountController.dispose();
     _noteController.dispose();
     _newFriendController.dispose();
+    _categoryScrollController.dispose();
+    _subcategoryScrollController.dispose();
     super.dispose();
   }
 
@@ -115,22 +187,40 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   List<String> _getSubcategories(TransactionCategory category) {
+    List<String> subs;
     switch (category) {
       case TransactionCategory.bills:
-        return ['Rent', 'Electricity', 'Water', 'Internet', 'Gas'];
+        subs = ['Rent', 'Electricity', 'Water', 'Internet', 'Gas'];
+        break;
       case TransactionCategory.food:
-        return ['Groceries', 'Dine out', 'Delivery', 'Coffee'];
+        subs = ['Groceries', 'Dine out', 'Delivery', 'Coffee'];
+        break;
       case TransactionCategory.travel:
-        return ['Fuel', 'Uber/Cab', 'Flights', 'Transit'];
+        subs = ['Fuel', 'Uber/Cab', 'Flights', 'Transit'];
+        break;
       case TransactionCategory.shopping:
-        return ['Clothes', 'Electronics', 'Home', 'Gifts'];
+        subs = ['Clothes', 'Electronics', 'Home', 'Gifts'];
+        break;
       case TransactionCategory.salary:
-        return ['Primary', 'Bonus', 'Overtime'];
+        subs = ['Paycheck', 'Bonus', 'Overtime'];
+        break;
       case TransactionCategory.freelance:
-        return ['Contract', 'Consulting', 'One-off'];
+        subs = ['Contract', 'Consulting', 'One-off'];
+        break;
+      case TransactionCategory.investment:
+        subs = ['Dividends', 'Stock Sale', 'Crypto', 'Real Estate'];
+        break;
+      case TransactionCategory.gift:
+        subs = ['Birthday', 'Holiday', 'Family'];
+        break;
       default:
-        return ['General', 'Utilities', 'Other'];
+        subs = ['General', 'Utilities', 'Other'];
     }
+    // Append 'Others' if not present
+    if (!subs.contains('Others')) {
+      subs.add('Others');
+    }
+    return subs;
   }
 
   void _presentDatePicker() async {
@@ -342,7 +432,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _selectedType = TransactionType.expense),
+                          onTap: () => setState(() {
+                            _selectedType = TransactionType.expense;
+                            _isOthersSelected = false;
+                            if (_selectedCategory == TransactionCategory.salary ||
+                                _selectedCategory == TransactionCategory.freelance ||
+                                _selectedCategory == TransactionCategory.investment ||
+                                _selectedCategory == TransactionCategory.gift) {
+                              _selectedCategory = TransactionCategory.food;
+                            }
+                            _noteController.clear();
+                          }),
                           child: Container(
                             decoration: BoxDecoration(
                               color: _selectedType == TransactionType.expense ? AppColors.expense : Colors.transparent,
@@ -362,7 +462,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       ),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _selectedType = TransactionType.income),
+                          onTap: () => setState(() {
+                            _selectedType = TransactionType.income;
+                            _isOthersSelected = false;
+                            if (_selectedCategory == TransactionCategory.food ||
+                                _selectedCategory == TransactionCategory.shopping ||
+                                _selectedCategory == TransactionCategory.travel ||
+                                _selectedCategory == TransactionCategory.bills ||
+                                _selectedCategory == TransactionCategory.entertainment ||
+                                _selectedCategory == TransactionCategory.health ||
+                                _selectedCategory == TransactionCategory.education) {
+                              _selectedCategory = TransactionCategory.salary;
+                            }
+                            _noteController.clear();
+                          }),
                           child: Container(
                             decoration: BoxDecoration(
                               color: _selectedType == TransactionType.income ? AppColors.primary : Colors.transparent,
@@ -387,42 +500,61 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
                 // Centered large gold Amount field
                 Center(
-                  child: SizedBox(
-                    width: 260,
-                    child: TextField(
-                      controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.fraunces(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Superscript currency symbol
+                      Transform.translate(
+                        offset: const Offset(0, -12),
+                        child: Text(
+                          currency,
+                          style: GoogleFonts.fraunces(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
-                      decoration: InputDecoration(
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Text(
-                            currency,
-                            style: GoogleFonts.fraunces(
-                              fontSize: 32,
-                              color: AppColors.primary,
+                      const SizedBox(width: 4),
+
+                      // Dynamic width white text input
+                      SizedBox(
+                        width: (_amountController.text.isEmpty ? 1 : _amountController.text.length) * 34.0 + 20.0,
+                        child: TextField(
+                          controller: _amountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.left,
+                          cursorColor: AppColors.primary, // Custom gold cursor
+                          cursorWidth: 2.0,
+                          cursorHeight: 48,
+                          style: GoogleFonts.fraunces(
+                            fontSize: 54,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white, // White digits
+                          ),
+                          decoration: InputDecoration(
+                            filled: false,
+                            fillColor: Colors.transparent,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintText: '0',
+                            hintStyle: GoogleFonts.fraunces(
+                              fontSize: 54,
+                              color: Colors.white.withOpacity(0.3),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                        border: InputBorder.none,
-                        hintText: '0',
-                        hintStyle: GoogleFonts.fraunces(
-                          fontSize: 48,
-                          color: AppColors.primary.withOpacity(0.3),
-                          fontWeight: FontWeight.bold,
+                          onChanged: (val) {
+                            setState(() {}); // refresh calculations and width dynamically
+                          },
                         ),
                       ),
-                      onChanged: (val) {
-                        setState(() {}); // refresh calculation displays
-                      },
-                    ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -441,6 +573,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 
                 // Horizontal category cards list
                 SingleChildScrollView(
+                  controller: _categoryScrollController,
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   child: Row(
@@ -472,6 +605,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             setState(() {
                               _selectedCategory = cat;
                               _noteController.clear();
+                              _isOthersSelected = false;
                             });
                           },
                           child: Container(
@@ -561,11 +695,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
                 // Horizontal chips layout
                 SingleChildScrollView(
+                  controller: _subcategoryScrollController,
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   child: Row(
                     children: subcategories.map((sub) {
-                      final isSelected = _noteController.text.trim().toLowerCase() == sub.toLowerCase();
+                      final isOthers = sub.toLowerCase() == 'others';
+                      final isSelected = isOthers
+                          ? _isOthersSelected
+                          : (_noteController.text.trim().toLowerCase() == sub.toLowerCase() && !_isOthersSelected);
+                          
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
@@ -590,7 +729,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           onSelected: (selected) {
                             if (selected) {
                               setState(() {
-                                _noteController.text = sub;
+                                if (isOthers) {
+                                  _isOthersSelected = true;
+                                  _noteController.clear();
+                                } else {
+                                  _isOthersSelected = false;
+                                  _noteController.text = sub;
+                                }
                               });
                             }
                           },
@@ -599,14 +744,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     }).toList(),
                   ),
                 ),
-                const SizedBox(height: 12),
                 
-                // Custom Note / Subcategory Text Field
-                AppTextField(
-                  controller: _noteController,
-                  label: 'Or type custom subcategory/note',
-                  prefixIcon: const Icon(Icons.edit_note_rounded, size: 20),
-                ),
+                // Custom Note / Subcategory Text Field (Only visible when Others is selected)
+                if (_isOthersSelected) ...[
+                  const SizedBox(height: 12),
+                  AppTextField(
+                    controller: _noteController,
+                    label: 'Enter custom subcategory/note',
+                    prefixIcon: const Icon(Icons.edit_note_rounded, size: 20),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // SPLIT expense toggle (Only for expenses)

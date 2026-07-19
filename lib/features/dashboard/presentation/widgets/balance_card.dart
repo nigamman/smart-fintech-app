@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
+import '../screens/main_navigation_screen.dart';
 
 class BalanceCard extends ConsumerStatefulWidget {
   final double safeToSpend;
@@ -172,6 +173,14 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(mainNavigationIndexProvider, (previous, next) {
+      if (next == 0) {
+        _arcController.forward(from: 0.0);
+      } else {
+        _arcController.reset();
+      }
+    });
+
     final currency = ref.watch(preferencesProvider).currency;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

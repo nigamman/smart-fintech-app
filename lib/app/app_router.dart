@@ -20,6 +20,7 @@ import '../features/savings_goal/domain/entities/savings_goal.dart';
 import '../features/savings_goal/presentation/screens/savings_goal_list_screen.dart';
 import '../features/savings_goal/presentation/screens/add_savings_goal_screen.dart';
 import '../features/analytics/presentation/screens/analytics_screen.dart';
+import '../features/analytics/presentation/screens/ai_counsel_screen.dart';
 import '../features/calendar/presentation/screens/calendar_screen.dart';
 import '../features/subscription/domain/entities/subscription.dart';
 import '../features/subscription/presentation/screens/subscription_list_screen.dart';
@@ -105,6 +106,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/split-ledger',
         builder: (context, state) => const SplitLedgerScreen(),
+      ),
+      GoRoute(
+        path: '/ai-counsel',
+        builder: (context, state) => const AiCounselScreen(),
       ),
 
       GoRoute(

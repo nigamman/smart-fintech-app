@@ -1,48 +1,657 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 
+import '../../../../commons/widgets/bouncy_button.dart';
 import '../../../../commons/widgets/primary_button.dart';
 import '../../../../commons/widgets/animated_linear_progress_bar.dart';
 import '../../../../commons/widgets/skeleton_loader.dart';
+import '../../../../core/enums/transaction_category.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../savings_goal/domain/entities/savings_goal.dart';
 import '../../../savings_goal/presentation/providers/savings_goal_providers.dart';
 import '../../../subscription/domain/entities/subscription.dart';
 import '../../../subscription/presentation/providers/subscription_providers.dart';
-import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../domain/entities/budget.dart';
 import '../providers/budget_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
-import '../../../profile/presentation/providers/profile_providers.dart';
 
-class PlanningScreen extends ConsumerWidget {
+class PlanningScreen extends ConsumerStatefulWidget {
   const PlanningScreen({super.key});
 
-  void _showGoalDetailsSheet(
-    BuildContext context,
-    WidgetRef ref,
-    SavingsGoal goal,
-    String currency,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pct = goal.targetAmount > 0
-        ? (goal.currentAmount / goal.targetAmount)
-        : 0.0;
-    final remaining = (goal.targetAmount - goal.currentAmount).clamp(
-      0.0,
-      double.infinity,
+  @override
+  ConsumerState<PlanningScreen> createState() => _PlanningScreenState();
+}
+
+class _PlanningScreenState extends ConsumerState<PlanningScreen> {
+  int _selectedTab = 0; // 0 for Budgets, 1 for Goals, 2 for Subs
+
+  Color _getCategoryColor(TransactionCategory category) {
+    switch (category) {
+      case TransactionCategory.bills:
+        return const Color(0xFFC8A05B); // Brass
+      case TransactionCategory.food:
+        return const Color(0xFFBC5B3E); // Rust Red
+      case TransactionCategory.travel:
+        return const Color(0xFF5E7A8A); // Steel Blue
+      case TransactionCategory.shopping:
+        return const Color(0xFF7C9473); // Sage Green
+      case TransactionCategory.entertainment:
+        return const Color(0xFF8A8EC4); // Lavender
+      case TransactionCategory.health:
+        return const Color(0xFFB86B7E); // Rose
+      case TransactionCategory.education:
+        return const Color(0xFFA4B86B); // Olive
+      case TransactionCategory.salary:
+        return const Color(0xFF7C9473); // Sage Green
+      case TransactionCategory.freelance:
+        return const Color(0xFFC8A05B); // Brass
+      case TransactionCategory.investment:
+        return const Color(0xFF5E7A8A); // Steel Blue
+      case TransactionCategory.gift:
+        return const Color(0xFF8A8EC4); // Lavender
+      case TransactionCategory.transfer:
+        return const Color(0xFF64748B); // Slate
+      case TransactionCategory.other:
+        return const Color(0xFF94A3B8); // Light Slate
+    }
+  }
+
+  Color _getProgressBarColor(double pct) {
+    if (pct >= 0.85) {
+      return const Color(0xFFBC5B3E); // Rust Red for close to limit
+    } else if (pct >= 0.50) {
+      return const Color(0xFFC8A05B); // Gold for warning
+    } else {
+      return const Color(0xFF7C9473); // Sage Green for safe pacing
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = ref.watch(preferencesProvider).currency;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(budgetProgressProvider);
+            ref.invalidate(savingsGoalsStreamProvider);
+            ref.invalidate(subscriptionsStreamProvider);
+          },
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              // Top Custom Header Row (FT & R)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.transparent,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 1.0),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'FT',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.transparent,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 1.0),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'R',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Title "Planning"
+              Text(
+                'Planning',
+                style: GoogleFonts.fraunces(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Horizontal Segmented Switcher Row
+              Container(
+                height: 44,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border, width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildTabButton('Budgets', 0)),
+                    Expanded(child: _buildTabButton('Goals', 1)),
+                    Expanded(child: _buildTabButton('Subs', 2)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Display Dynamic Tab content
+              _buildTabContent(currency),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Widget _buildTabButton(String label, int index) {
+    final isActive = _selectedTab == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTab = index;
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isActive ? AppColors.background : AppColors.primaryText,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent(String currency) {
+    switch (_selectedTab) {
+      case 0:
+        return _buildBudgetsTab(currency);
+      case 1:
+        return _buildGoalsTab(currency);
+      case 2:
+        return _buildSubsTab(currency);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // --- TAB CONTENT 1: BUDGETS ---
+  Widget _buildBudgetsTab(String currency) {
+    final budgetProgressAsync = ref.watch(budgetProgressProvider);
+
+    return budgetProgressAsync.when(
+      loading: () => const Column(
+        children: [
+          SkeletonLoader.card(height: 90),
+          SizedBox(height: 12),
+          SkeletonLoader.card(height: 80),
+          SizedBox(height: 12),
+          SkeletonLoader.card(height: 80),
+        ],
+      ),
+      error: (err, stack) => Center(
+        child: Text('Error loading budgets: $err', style: AppTextStyles.body),
+      ),
+      data: (progress) {
+        final totalPct = progress.progressPercentage;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // MONTHLY LIMIT card
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border, width: 1.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'MONTHLY LIMIT',
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.disabledText,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      Text(
+                        '$currency${progress.totalSpent.toStringAsFixed(0)} / $currency${progress.totalLimit.toStringAsFixed(0)}',
+                        style: AppTextStyles.mono.copyWith(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: AnimatedLinearProgressBar(
+                      progress: totalPct,
+                      minHeight: 6,
+                      backgroundColor: AppColors.border.withOpacity(0.3),
+                      valueColor: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Individual Category Cards
+            if (progress.categoryProgresses.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Text('No budgets configured.', style: AppTextStyles.bodySecondary),
+                ),
+              )
+            else
+              ...progress.categoryProgresses.map((catProgress) {
+                final catPct = catProgress.limit > 0 ? (catProgress.spent / catProgress.limit) : 0.0;
+                final catName = catProgress.category.name[0].toUpperCase() + catProgress.category.name.substring(1);
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border, width: 1.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _getCategoryColor(catProgress.category),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                catName,
+                                style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '$currency${catProgress.spent.toStringAsFixed(0)} / $currency${catProgress.limit.toStringAsFixed(0)}',
+                            style: AppTextStyles.monoSecondary.copyWith(
+                              fontSize: 11.5,
+                              color: AppColors.primaryText.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: AnimatedLinearProgressBar(
+                          progress: catPct,
+                          minHeight: 5,
+                          backgroundColor: AppColors.border.withOpacity(0.3),
+                          valueColor: _getProgressBarColor(catPct),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => context.push('/budget'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.0),
+                ),
+                child: Text(
+                  'Manage Budgets',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- TAB CONTENT 2: GOALS ---
+  Widget _buildGoalsTab(String currency) {
+    final goalsAsync = ref.watch(savingsGoalsStreamProvider);
+
+    return goalsAsync.when(
+      loading: () => const Column(
+        children: [
+          SkeletonLoader.card(height: 80),
+          SizedBox(height: 12),
+          SkeletonLoader.card(height: 80),
+        ],
+      ),
+      error: (err, stack) => Center(
+        child: Text('Error loading goals: $err', style: AppTextStyles.body),
+      ),
+      data: (goals) {
+        if (goals.isEmpty) {
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Text('No savings goals set yet.', style: AppTextStyles.bodySecondary),
+              ),
+              _buildAddGoalButton(),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            ...goals.map((goal) {
+              final pct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () => _showGoalDetailsSheet(context, ref, goal, currency),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border, width: 1.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  goal.name,
+                                  style: AppTextStyles.body.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '$currency${goal.currentAmount.toStringAsFixed(0)} / $currency${goal.targetAmount.toStringAsFixed(0)}',
+                              style: AppTextStyles.monoSecondary.copyWith(
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: AnimatedLinearProgressBar(
+                            progress: pct,
+                            minHeight: 5,
+                            backgroundColor: AppColors.border.withOpacity(0.3),
+                            valueColor: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 12),
+            _buildAddGoalButton(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAddGoalButton() {
+    return GestureDetector(
+      onTap: () => context.push('/add-savings-goal'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.0),
+        ),
+        child: Text(
+          'Add Savings Goal',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- TAB CONTENT 3: SUBS ---
+  Widget _buildSubsTab(String currency) {
+    final subsAsync = ref.watch(subscriptionsStreamProvider);
+
+    return subsAsync.when(
+      loading: () => const Column(
+        children: [
+          SkeletonLoader.card(height: 80),
+          SizedBox(height: 12),
+          SkeletonLoader.card(height: 80),
+        ],
+      ),
+      error: (err, stack) => Center(
+        child: Text('Error loading subscriptions: $err', style: AppTextStyles.body),
+      ),
+      data: (subs) {
+        if (subs.isEmpty) {
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Text('No recurring bills logged yet.', style: AppTextStyles.bodySecondary),
+              ),
+              _buildAddSubButton(),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            ...subs.map((sub) {
+              final days = sub.nextBillingDate.difference(DateTime.now()).inDays;
+              final String dueLabel;
+              if (days == 0) {
+                dueLabel = 'Due today';
+              } else if (days < 0) {
+                dueLabel = 'Overdue by ${days.abs()} days';
+              } else {
+                dueLabel = 'Due in $days days';
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () => _showBillActionsSheet(context, ref, sub, currency),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border, width: 1.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF5E7A8A), // Blue steel
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  sub.name,
+                                  style: AppTextStyles.body.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '$currency${sub.amount.toStringAsFixed(0)} / ${sub.billingCycle.name.toLowerCase()}',
+                              style: AppTextStyles.monoSecondary.copyWith(
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          dueLabel,
+                          style: AppTextStyles.caption.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: days <= 2 ? const Color(0xFFBC5B3E) : AppColors.disabledText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 12),
+            _buildAddSubButton(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAddSubButton() {
+    return GestureDetector(
+      onTap: () => context.push('/add-subscription'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.0),
+        ),
+        child: Text(
+          'Add Subscription / Bill',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- ACTIONS & DIALOGS FROM ORIGINAL IMPLEMENTATION ---
+  void _showGoalDetailsSheet(BuildContext context, WidgetRef ref, SavingsGoal goal, String currency) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
+    final remaining = (goal.targetAmount - goal.currentAmount).clamp(0.0, double.infinity);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -65,9 +674,7 @@ class PlanningScreen extends ConsumerWidget {
                       width: 38,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFFE2E8F0),
+                        color: AppColors.border,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -79,8 +686,10 @@ class PlanningScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           goal.name,
-                          style: AppTextStyles.h2.copyWith(
+                          style: GoogleFonts.fraunces(
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -89,36 +698,30 @@ class PlanningScreen extends ConsumerWidget {
                       IconButton(
                         icon: const Icon(
                           Icons.delete_outline_rounded,
-                          color: AppColors.expense,
+                          color: Color(0xFFBC5B3E),
                         ),
                         onPressed: () async {
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: const Text('Delete Goal?'),
-                              content: Text(
-                                'Are you sure you want to delete "${goal.name}"?',
-                              ),
+                              backgroundColor: AppColors.surface,
+                              title: const Text('Delete Goal?', style: TextStyle(color: Colors.white)),
+                              content: Text('Are you sure you want to delete "${goal.name}"?', style: const TextStyle(color: Colors.white70)),
                               actions: [
                                 TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
+                                  onPressed: () => Navigator.pop(context, false),
                                   child: const Text('Cancel'),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, true),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: AppColors.expense,
-                                  ),
+                                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFBC5B3E)),
                                   child: const Text('Delete'),
                                 ),
                               ],
                             ),
                           );
                           if (confirm == true) {
-                            await ref
-                                .read(savingsGoalControllerProvider.notifier)
-                                .deleteGoal(goal.id);
+                            await ref.read(savingsGoalControllerProvider.notifier).deleteGoal(goal.id);
                             ref.invalidate(savingsGoalsStreamProvider);
                             Navigator.pop(context);
                           }
@@ -126,12 +729,12 @@ class PlanningScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  VSpace.sm,
+                  const SizedBox(height: 4),
                   Text(
                     'Target Date: ${DateFormat('dd MMMM yyyy').format(goal.targetDate)}',
                     style: AppTextStyles.bodySecondary,
                   ),
-                  VSpace.lg,
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -139,52 +742,49 @@ class PlanningScreen extends ConsumerWidget {
                         'Saved: $currency${goal.currentAmount.toStringAsFixed(0)} / $currency${goal.targetAmount.toStringAsFixed(0)}',
                         style: AppTextStyles.body.copyWith(
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                       Text(
                         '${(pct * 100).toStringAsFixed(0)}%',
                         style: AppTextStyles.body.copyWith(
-                          color: AppColors.accent,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  VSpace.sm,
+                  const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: AnimatedLinearProgressBar(
                       progress: pct,
-                      minHeight: 8,
-                      backgroundColor: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFF1F5F9),
-                      valueColor: AppColors.accent,
+                      minHeight: 6,
+                      backgroundColor: AppColors.border.withOpacity(0.3),
+                      valueColor: AppColors.primary,
                     ),
                   ),
-                  VSpace.lg,
+                  const SizedBox(height: 14),
                   if (remaining > 0)
                     Text(
                       'Needs $currency${remaining.toStringAsFixed(0)} more to reach target.',
                       style: AppTextStyles.caption.copyWith(
                         fontStyle: FontStyle.italic,
+                        color: AppColors.disabledText,
                       ),
                     ),
-                  VSpace.xl,
+                  const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () =>
-                              _showAddMoneyDialog(context, ref, goal, false),
+                          onPressed: () => _showAddMoneyDialog(context, ref, goal, false),
                           icon: const Icon(Icons.remove),
                           label: const Text('Withdraw'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.expense,
-                            side: const BorderSide(color: AppColors.expense),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            foregroundColor: const Color(0xFFBC5B3E),
+                            side: const BorderSide(color: Color(0xFFBC5B3E)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
@@ -192,18 +792,13 @@ class PlanningScreen extends ConsumerWidget {
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () =>
-                              _showAddMoneyDialog(context, ref, goal, true),
+                          onPressed: () => _showAddMoneyDialog(context, ref, goal, true),
                           icon: const Icon(Icons.add),
                           label: const Text('Add Cash'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: isDark
-                                ? const Color(0xFF020617)
-                                : Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.background,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
@@ -219,12 +814,7 @@ class PlanningScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddMoneyDialog(
-    BuildContext context,
-    WidgetRef ref,
-    SavingsGoal goal,
-    bool isAdding,
-  ) {
+  void _showAddMoneyDialog(BuildContext context, WidgetRef ref, SavingsGoal goal, bool isAdding) {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
@@ -232,10 +822,10 @@ class PlanningScreen extends ConsumerWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: AppColors.surface,
           title: Text(
-            isAdding
-                ? 'Add money to "${goal.name}"'
-                : 'Withdraw from "${goal.name}"',
+            isAdding ? 'Add money to "${goal.name}"' : 'Withdraw from "${goal.name}"',
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           content: Form(
             key: formKey,
@@ -243,20 +833,21 @@ class PlanningScreen extends ConsumerWidget {
               controller: controller,
               keyboardType: TextInputType.number,
               autofocus: true,
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: 'Amount',
-                prefixIcon: const Icon(Icons.currency_rupee_rounded),
-                helperText: !isAdding
-                    ? 'Available: ${goal.currentAmount.toStringAsFixed(0)}'
-                    : null,
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.currency_rupee_rounded, color: AppColors.primary),
+                helperText: !isAdding ? 'Available: ${goal.currentAmount.toStringAsFixed(0)}' : null,
+                helperStyle: const TextStyle(color: Colors.white60),
+                enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.border)),
+                focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
               ),
               validator: (val) {
                 if (val == null || val.isEmpty) return 'Please enter an amount';
                 final amount = double.tryParse(val);
-                if (amount == null || amount <= 0)
-                  return 'Please enter a valid positive amount';
-                if (!isAdding && amount > goal.currentAmount)
-                  return 'Insufficient goal funds';
+                if (amount == null || amount <= 0) return 'Please enter a valid positive amount';
+                if (!isAdding && amount > goal.currentAmount) return 'Insufficient goal funds';
                 return null;
               },
             ),
@@ -264,7 +855,7 @@ class PlanningScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
             ),
             TextButton(
               onPressed: () async {
@@ -277,25 +868,18 @@ class PlanningScreen extends ConsumerWidget {
                   userId: goal.userId,
                   name: goal.name,
                   targetAmount: goal.targetAmount,
-                  currentAmount: (goal.currentAmount + change).clamp(
-                    0,
-                    double.infinity,
-                  ),
+                  currentAmount: (goal.currentAmount + change).clamp(0, double.infinity),
                   targetDate: goal.targetDate,
                   createdAt: goal.createdAt,
                 );
 
-                await ref
-                    .read(savingsGoalControllerProvider.notifier)
-                    .saveGoal(updated);
+                await ref.read(savingsGoalControllerProvider.notifier).saveGoal(updated);
                 ref.invalidate(savingsGoalsStreamProvider);
 
                 Navigator.pop(context); // Close dialog
-                Navigator.pop(
-                  context,
-                ); // Close bottom sheet to refresh progress
+                Navigator.pop(context); // Close bottom sheet
               },
-              child: const Text('Confirm'),
+              child: Text('Confirm', style: TextStyle(color: AppColors.primary)),
             ),
           ],
         );
@@ -303,15 +887,10 @@ class PlanningScreen extends ConsumerWidget {
     );
   }
 
-  void _showBillActionsSheet(
-    BuildContext context,
-    WidgetRef ref,
-    Subscription sub,
-    String currency,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  void _showBillActionsSheet(BuildContext context, WidgetRef ref, Subscription sub, String currency) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -328,9 +907,7 @@ class PlanningScreen extends ConsumerWidget {
                     width: 38,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFE2E8F0),
+                      color: AppColors.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -338,24 +915,28 @@ class PlanningScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
                 Text(
                   sub.name,
-                  style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.fraunces(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-                VSpace.sm,
+                const SizedBox(height: 6),
                 Text(
                   'Amount: $currency${sub.amount.toStringAsFixed(0)} • Billing: ${sub.billingCycle.name.toUpperCase()}',
                   style: AppTextStyles.bodySecondary,
                 ),
                 Text(
                   'Next Due Date: ${DateFormat('dd MMMM yyyy').format(sub.nextBillingDate)}',
-                  style: AppTextStyles.caption,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.disabledText),
                 ),
-                VSpace.xl,
+                const SizedBox(height: 20),
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.blueAccent,
-                    child: Icon(Icons.edit_rounded, color: Colors.white),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.primary.withOpacity(0.12),
+                    child: Icon(Icons.edit_rounded, color: AppColors.primary),
                   ),
-                  title: const Text('Edit Bill Details'),
+                  title: const Text('Edit Bill Details', style: TextStyle(color: Colors.white)),
                   onTap: () {
                     Navigator.pop(context);
                     context.push('/add-subscription', extra: sub);
@@ -363,18 +944,17 @@ class PlanningScreen extends ConsumerWidget {
                 ),
                 ListTile(
                   leading: const CircleAvatar(
-                    backgroundColor: AppColors.expense,
+                    backgroundColor: Color(0xFFBC5B3E),
                     child: Icon(Icons.delete_rounded, color: Colors.white),
                   ),
-                  title: const Text('Delete Bill / Sub'),
+                  title: const Text('Delete Bill / Sub', style: TextStyle(color: Colors.white)),
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Delete Bill?'),
-                        content: Text(
-                          'Are you sure you want to stop tracking "${sub.name}"?',
-                        ),
+                        backgroundColor: AppColors.surface,
+                        title: const Text('Delete Bill?', style: TextStyle(color: Colors.white)),
+                        content: Text('Are you sure you want to stop tracking "${sub.name}"?', style: const TextStyle(color: Colors.white70)),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -382,18 +962,14 @@ class PlanningScreen extends ConsumerWidget {
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.expense,
-                            ),
+                            style: TextButton.styleFrom(foregroundColor: const Color(0xFFBC5B3E)),
                             child: const Text('Delete'),
                           ),
                         ],
                       ),
                     );
                     if (confirm == true) {
-                      await ref
-                          .read(subscriptionControllerProvider.notifier)
-                          .deleteSubscription(sub.id);
+                      await ref.read(subscriptionControllerProvider.notifier).deleteSubscription(sub.id);
                       ref.invalidate(subscriptionsStreamProvider);
                       Navigator.pop(context);
                     }
@@ -404,477 +980,6 @@ class PlanningScreen extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-
-  void _showBudgetInfoDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Budget Limit Calculation'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'By default, your Monthly Spending Budget is calculated as:',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              SizedBox(height: 12),
-              Card(
-                color: Colors.blueAccent,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Center(
-                    child: Text(
-                      'Monthly Income\n-\nMonthly Savings Goal',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 12),
-              Text('This keeps your target savings safe from daily expenses.'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final budgetProgressAsync = ref.watch(budgetProgressProvider);
-    final goalsAsync = ref.watch(savingsGoalsStreamProvider);
-    final subsAsync = ref.watch(subscriptionsStreamProvider);
-    final currency = ref.watch(preferencesProvider).currency;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Planning')),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(budgetProgressProvider);
-          ref.invalidate(savingsGoalsStreamProvider);
-          ref.invalidate(subscriptionsStreamProvider);
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            // 1. Budget Card Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Monthly Budget',
-                      style: AppTextStyles.title.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.info_outline_rounded,
-                        size: 16,
-                        color: AppColors.accent,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () => _showBudgetInfoDialog(context),
-                      tooltip: 'About monthly budget limit calculation',
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => context.push('/budget'),
-                  child: const Text('Manage Budgets'),
-                ),
-              ],
-            ),
-            VSpace.md,
-            budgetProgressAsync.when(
-              loading: () => const SkeletonLoader.card(height: 110),
-              error: (err, stack) => Text('Error: $err'),
-              data: (progress) {
-                final pct = progress.progressPercentage;
-                final pctText = (pct * 100).toStringAsFixed(0);
-                return InkWell(
-                  onTap: () => context.push('/budget'),
-                  borderRadius: AppRadius.large,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                      borderRadius: AppRadius.large,
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$currency${progress.totalSpent.toStringAsFixed(0)} / $currency${progress.totalLimit.toStringAsFixed(0)}',
-                                  style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                VSpace.xs,
-                                Text('Spent of monthly limit', style: AppTextStyles.caption),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: progress.isExceeded
-                                    ? AppColors.expense.withValues(alpha: 0.1)
-                                    : AppColors.accent.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '$pctText%',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: progress.isExceeded ? AppColors.expense : AppColors.accent,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        VSpace.md,
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: AnimatedLinearProgressBar(
-                            progress: pct,
-                            minHeight: 6,
-                            backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                            valueColor: progress.isExceeded ? AppColors.expense : AppColors.accent,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            VSpace.xl,
-
-            // 2. Savings Goals Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Savings Goals',
-                  style: AppTextStyles.title.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/add-savings-goal'),
-                  child: const Text('Add Goal'),
-                ),
-              ],
-            ),
-            VSpace.sm,
-            goalsAsync.when(
-              loading: () => const SkeletonLoader.card(height: 120),
-              error: (err, stack) => Text('Error: $err'),
-              data: (goals) {
-                if (goals.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(24),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                      borderRadius: AppRadius.large,
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Text(
-                      'No savings goals set yet.',
-                      style: AppTextStyles.bodySecondary,
-                    ),
-                  );
-                }
-                return Column(
-                  children: goals.map((goal) {
-                    final pct = goal.targetAmount > 0
-                        ? (goal.currentAmount / goal.targetAmount)
-                        : 0.0;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: InkWell(
-                        onTap: () =>
-                            _showGoalDetailsSheet(context, ref, goal, currency),
-                        borderRadius: AppRadius.large,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF131B2E)
-                                : Colors.white,
-                            borderRadius: AppRadius.large,
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF1E293B)
-                                  : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    goal.name,
-                                    style: AppTextStyles.body.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${(pct * 100).toStringAsFixed(0)}%',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.accent,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              VSpace.xs,
-                              Text(
-                                '$currency${goal.currentAmount.toStringAsFixed(0)} of $currency${goal.targetAmount.toStringAsFixed(0)}',
-                                style: AppTextStyles.caption,
-                              ),
-                              VSpace.md,
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: AnimatedLinearProgressBar(
-                                  progress: pct,
-                                  minHeight: 5,
-                                  backgroundColor: isDark
-                                      ? const Color(0xFF1E293B)
-                                      : const Color(0xFFF1F5F9),
-                                  valueColor: AppColors.accent,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-            VSpace.xl,
-
-            // 3. Upcoming Bills (Subscriptions) Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Upcoming Bills & Subs',
-                  style: AppTextStyles.title.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/add-subscription'),
-                  child: const Text('Add Bill'),
-                ),
-              ],
-            ),
-            VSpace.sm,
-            subsAsync.when(
-              loading: () => const SkeletonLoader.listTile(),
-              error: (err, stack) => Text('Error: $err'),
-              data: (subs) {
-                if (subs.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(24),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                      borderRadius: AppRadius.large,
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Text(
-                      'No recurring bills logged.',
-                      style: AppTextStyles.bodySecondary,
-                    ),
-                  );
-                }
-                return Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                    borderRadius: AppRadius.large,
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Column(
-                    children: subs.map((sub) {
-                      final days = sub.nextBillingDate
-                          .difference(DateTime.now())
-                          .inDays;
-                      final dayText = days == 0
-                          ? 'Due Today'
-                          : (days == 1 ? 'Due Tomorrow' : 'Due in $days days');
-
-                      return ListTile(
-                        onTap: () =>
-                            _showBillActionsSheet(context, ref, sub, currency),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blueAccent.withValues(
-                            alpha: 0.1,
-                          ),
-                          child: const Icon(
-                            Icons.receipt_rounded,
-                            color: Colors.blueAccent,
-                            size: 18,
-                          ),
-                        ),
-                        title: Text(
-                          sub.name,
-                          style: AppTextStyles.body.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(dayText, style: AppTextStyles.caption),
-                        trailing: Text(
-                          '$currency${sub.amount.toStringAsFixed(0)}',
-                          style: AppTextStyles.body.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                );
-              },
-            ),
-            VSpace.xl,
-
-            // 4. Split Bills Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Split Bills & Tabs',
-                  style: AppTextStyles.title.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/split-ledger'),
-                  child: const Text('Manage Splits'),
-                ),
-              ],
-            ),
-            VSpace.sm,
-            ref.watch(transactionsStreamProvider).when(
-              loading: () => const SkeletonLoader.card(height: 80),
-              error: (err, stack) => Text('Error: $err'),
-              data: (transactions) {
-                final splitTransactions = transactions.where((tx) => tx.isSplit && !tx.isSplitPaid).toList();
-                
-                double totalOwed = 0.0;
-                final Set<String> debtors = {};
-                for (final tx in splitTransactions) {
-                  final owes = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
-                  totalOwed += owes;
-                  debtors.add(tx.splitWith ?? 'Unknown');
-                }
-
-                return InkWell(
-                  onTap: () => context.push('/split-ledger'),
-                  borderRadius: AppRadius.large,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                      borderRadius: AppRadius.large,
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: AppColors.income.withValues(alpha: 0.1),
-                          child: const Icon(
-                            Icons.splitscreen_rounded,
-                            color: AppColors.income,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                totalOwed > 0
-                                    ? '$currency${totalOwed.toStringAsFixed(0)} pending repayment'
-                                    : 'All settled up!',
-                                style: AppTextStyles.body.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: totalOwed > 0 ? AppColors.income : AppColors.secondaryText,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                totalOwed > 0
-                                    ? 'From ${debtors.length} friend${debtors.length > 1 ? 's' : ''}'
-                                    : 'No outstanding balances',
-                                style: AppTextStyles.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 14,
-                          color: AppColors.secondaryText,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

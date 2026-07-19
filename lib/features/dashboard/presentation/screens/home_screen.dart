@@ -19,6 +19,7 @@ import '../../../../core/enums/transaction_type.dart';
 import '../../presentation/providers/dashboard_providers.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/greeting_header.dart';
+import 'main_navigation_screen.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -336,12 +337,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           _buildQuickActionButton(
                             icon: Icons.remove,
                             label: 'Expense',
-                            onTap: () => context.push('/transactions/add?type=expense'),
+                            onTap: () => context.push('/add-transaction?type=expense'),
                           ),
                           _buildQuickActionButton(
                             icon: Icons.add,
                             label: 'Income',
-                            onTap: () => context.push('/transactions/add?type=income'),
+                            onTap: () => context.push('/add-transaction?type=income'),
                           ),
                           _buildQuickActionButton(
                             icon: Icons.swap_horiz_rounded,
@@ -608,7 +609,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 // Reusable micro-interaction fade in slide animation wrapper
-class FadeInWidget extends StatefulWidget {
+// Reusable micro-interaction fade in slide animation wrapper
+class FadeInWidget extends ConsumerStatefulWidget {
   final Widget child;
   final Duration delay;
 
@@ -619,10 +621,10 @@ class FadeInWidget extends StatefulWidget {
   });
 
   @override
-  State<FadeInWidget> createState() => _FadeInWidgetState();
+  ConsumerState<FadeInWidget> createState() => _FadeInWidgetState();
 }
 
-class _FadeInWidgetState extends State<FadeInWidget> with SingleTickerProviderStateMixin {
+class _FadeInWidgetState extends ConsumerState<FadeInWidget> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
@@ -662,6 +664,18 @@ class _FadeInWidgetState extends State<FadeInWidget> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(mainNavigationIndexProvider, (previous, next) {
+      if (next == 0) {
+        Future.delayed(widget.delay, () {
+          if (mounted) {
+            _controller.forward(from: 0.0);
+          }
+        });
+      } else {
+        _controller.reset();
+      }
+    });
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -672,7 +686,7 @@ class _FadeInWidgetState extends State<FadeInWidget> with SingleTickerProviderSt
   }
 }
 
-class AnimatedProgressRing extends StatefulWidget {
+class AnimatedProgressRing extends ConsumerStatefulWidget {
   final double progress;
   final double size;
   final ScrollController scrollController;
@@ -685,10 +699,10 @@ class AnimatedProgressRing extends StatefulWidget {
   });
 
   @override
-  State<AnimatedProgressRing> createState() => _AnimatedProgressRingState();
+  ConsumerState<AnimatedProgressRing> createState() => _AnimatedProgressRingState();
 }
 
-class _AnimatedProgressRingState extends State<AnimatedProgressRing> with SingleTickerProviderStateMixin {
+class _AnimatedProgressRingState extends ConsumerState<AnimatedProgressRing> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _animation;
   bool _hasTriggered = false;
@@ -744,6 +758,20 @@ class _AnimatedProgressRingState extends State<AnimatedProgressRing> with Single
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(mainNavigationIndexProvider, (previous, next) {
+      if (next == 0) {
+        if (!_hasTriggered) {
+          widget.scrollController.removeListener(_checkVisibility);
+          widget.scrollController.addListener(_checkVisibility);
+        }
+        _checkVisibility();
+      } else {
+        _hasTriggered = false;
+        _controller.reset();
+        widget.scrollController.removeListener(_checkVisibility);
+      }
+    });
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {

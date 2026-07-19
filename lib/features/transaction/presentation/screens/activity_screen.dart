@@ -479,7 +479,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                                                       return Column(
                                                         children: [
                                                           GestureDetector(
-                                                            onTap: () => context.push('/transactions/add', extra: tx),
+                                                            onTap: () => context.push('/add-transaction', extra: tx),
                                                             child: Padding(
                                                               padding: const EdgeInsets.symmetric(vertical: 14),
                                                               child: Row(

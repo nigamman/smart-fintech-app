@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../commons/widgets/app_text_field.dart';
-import '../../../../commons/widgets/primary_button.dart';
+import '../../../../commons/widgets/bouncy_button.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/subscription.dart';
 import '../../domain/enums/billing_cycle.dart';
 import '../providers/subscription_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
 class AddSubscriptionScreen extends ConsumerStatefulWidget {
   final Subscription? subscription;
@@ -32,7 +31,8 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _amountController;
   late BillingCycle _selectedCycle;
-  late DateTime _selectedDate;
+  late DateTime _startDate;
+  late DateTime _nextBillingDate;
 
   bool get _isEditMode => widget.subscription != null;
 
@@ -41,11 +41,15 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
     super.initState();
     final sub = widget.subscription;
     _nameController = TextEditingController(text: sub?.name ?? '');
+    _nameController.addListener(() {
+      setState(() {}); // refresh letter chip dynamically
+    });
     _amountController = TextEditingController(
       text: sub != null ? sub.amount.toStringAsFixed(0) : '',
     );
     _selectedCycle = sub?.billingCycle ?? BillingCycle.monthly;
-    _selectedDate = sub?.nextBillingDate ?? DateTime.now().add(const Duration(days: 30));
+    _startDate = sub?.createdAt ?? DateTime.now();
+    _nextBillingDate = sub?.nextBillingDate ?? _calculateNextBillingDate(_startDate, _selectedCycle);
   }
 
   @override
@@ -55,18 +59,29 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
     super.dispose();
   }
 
-  void _presentDatePicker() async {
-    final pickedDate = await showDatePicker(
+  DateTime _calculateNextBillingDate(DateTime start, BillingCycle cycle) {
+    if (cycle == BillingCycle.weekly) {
+      return start.add(const Duration(days: 7));
+    } else if (cycle == BillingCycle.yearly) {
+      return start.add(const Duration(days: 365));
+    } else {
+      // Monthly
+      return DateTime(start.year, start.month + 1, start.day);
+    }
+  }
+
+  void _presentStartDatePicker() async {
+    final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      initialDate: _startDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime(2100),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: AppColors.primary,
-              onPrimary: AppColors.white,
+              onPrimary: AppColors.background,
               surface: AppColors.surface,
               onSurface: AppColors.primaryText,
             ),
@@ -76,9 +91,38 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
       },
     );
 
-    if (pickedDate != null) {
+    if (picked != null) {
       setState(() {
-        _selectedDate = pickedDate;
+        _startDate = picked;
+        _nextBillingDate = _calculateNextBillingDate(_startDate, _selectedCycle);
+      });
+    }
+  }
+
+  void _presentNextDatePicker() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _nextBillingDate,
+      firstDate: _startDate,
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: AppColors.background,
+              surface: AppColors.surface,
+              onSurface: AppColors.primaryText,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _nextBillingDate = picked;
       });
     }
   }
@@ -104,8 +148,8 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
       name: _nameController.text.trim(),
       amount: costVal,
       billingCycle: _selectedCycle,
-      nextBillingDate: _selectedDate,
-      createdAt: widget.subscription?.createdAt ?? DateTime.now(),
+      nextBillingDate: _nextBillingDate,
+      createdAt: _startDate, // Map startsOn to createdAt
     );
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -124,174 +168,331 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
     }
   }
 
-  void _confirmDelete() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Subscription'),
-          content: const Text('Are you sure you want to permanently stop tracking this subscription?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(this.context);
-                try {
-                  await ref
-                      .read(subscriptionControllerProvider.notifier)
-                      .deleteSubscription(widget.subscription!.id);
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(content: Text('Subscription deleted successfully')),
-                  );
-                  if (mounted) this.context.pop();
-                } catch (e) {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(content: Text('Error deleting subscription: $e')),
-                  );
-                }
-              },
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: AppColors.expense),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final controllerState = ref.watch(subscriptionControllerProvider);
     final isLoading = controllerState.isLoading;
+    final currency = ref.watch(preferencesProvider).currency;
+
+    final firstLetter = _nameController.text.trim().isNotEmpty
+        ? _nameController.text.trim()[0].toUpperCase()
+        : '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditMode ? 'Edit Subscription' : 'Add Subscription'),
-        actions: [
-          if (_isEditMode)
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.expense),
-              tooltip: 'Delete Subscription',
-              onPressed: isLoading ? null : _confirmDelete,
-            ),
-        ],
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            children: [
+              // Custom Header Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _isEditMode ? 'Edit subscription' : 'Add subscription',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => context.pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // PROVIDER NAME Input Area
+              Text(
+                'PROVIDER NAME',
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.disabledText,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _nameController,
+                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Provider name is required';
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Netflix, Spotify, gym...',
+                          hintStyle: TextStyle(
+                            color: AppColors.secondaryText.withOpacity(0.4),
+                            fontSize: 15,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          filled: false,
+                        ),
+                      ),
+                    ),
+                    if (firstLetter.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border, width: 1.0),
+                        ),
+                        child: Text(
+                          firstLetter,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Centered large gold Amount field
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Superscript currency symbol
+                    Transform.translate(
+                      offset: const Offset(0, -12),
+                      child: Text(
+                        currency,
+                        style: GoogleFonts.fraunces(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+
+                    // Dynamic width white text input
+                    SizedBox(
+                      width: (_amountController.text.isEmpty ? 1 : _amountController.text.length) * 34.0 + 20.0,
+                      child: TextFormField(
+                        controller: _amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textAlign: TextAlign.left,
+                        cursorColor: AppColors.primary, // Custom gold cursor
+                        cursorWidth: 2.0,
+                        cursorHeight: 48,
+                        style: GoogleFonts.fraunces(
+                          fontSize: 54,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white, // White digits
+                        ),
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'Cost amount is required';
+                          if (double.tryParse(val) == null || double.parse(val) <= 0) {
+                            return 'Enter a valid cost';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintText: '0',
+                          hintStyle: GoogleFonts.fraunces(
+                            fontSize: 54,
+                            color: Colors.white.withOpacity(0.3),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() {}); // refresh calculations and width dynamically
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // BILLING CYCLE field
+              Text(
+                'BILLING CYCLE',
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.disabledText,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                height: 44,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border, width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildCycleTab('Weekly', BillingCycle.weekly)),
+                    Expanded(child: _buildCycleTab('Monthly', BillingCycle.monthly)),
+                    Expanded(child: _buildCycleTab('Yearly', BillingCycle.yearly)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Starts on Date Selector Row
+              GestureDetector(
+                onTap: _presentStartDatePicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 1.0),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Starts on',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        DateFormat('dd MMM yyyy').format(_startDate),
+                        style: AppTextStyles.mono.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Next billing date Date Selector Row
+              GestureDetector(
+                onTap: _presentNextDatePicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 1.0),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Next billing date',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        DateFormat('dd MMM yyyy').format(_nextBillingDate),
+                        style: AppTextStyles.mono.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Save subscription Action Button
+              BouncyButton(
+                onTap: isLoading ? null : _submitForm,
+                child: Container(
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    _isEditMode ? 'Save changes' : 'Save subscription',
+                    style: const TextStyle(
+                      color: AppColors.background,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            // Name field
-            Text(
-              'SUBSCRIPTION NAME',
-              style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-            ),
-            VSpace.md,
-            AppTextField(
-              controller: _nameController,
-              label: 'e.g. Netflix, iCloud, Gym',
-              prefixIcon: const Icon(Icons.title_rounded),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) return 'Subscription name is required';
-                return null;
-              },
-            ),
-            VSpace.xl,
+    );
+  }
 
-            // Cost field
-            Text(
-              'RECURRING COST',
-              style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-            ),
-            VSpace.md,
-            AppTextField(
-              controller: _amountController,
-              label: 'How much do you pay?',
-              keyboardType: TextInputType.number,
-              prefixIcon: const Icon(Icons.currency_rupee_rounded),
-              validator: (val) {
-                if (val == null || val.isEmpty) return 'Cost amount is required';
-                if (double.tryParse(val) == null || double.parse(val) <= 0) {
-                  return 'Enter a valid positive amount';
-                }
-                return null;
-              },
-            ),
-            VSpace.xl,
-
-            // Billing Cycle field
-            Text(
-              'BILLING CYCLE',
-              style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-            ),
-            VSpace.md,
-            DropdownButtonFormField<BillingCycle>(
-              value: _selectedCycle,
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                fillColor: AppColors.surface,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: AppRadius.medium,
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: AppRadius.medium,
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                prefixIcon: const Icon(Icons.repeat_rounded, color: AppColors.primary),
-              ),
-              items: BillingCycle.values.map((cycle) {
-                final cycleName = cycle.name[0].toUpperCase() + cycle.name.substring(1);
-                return DropdownMenuItem<BillingCycle>(
-                  value: cycle,
-                  child: Text(cycleName, style: AppTextStyles.body),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _selectedCycle = val;
-                  });
-                }
-              },
-            ),
-            VSpace.xl,
-
-            // Next Billing Date field
-            Text(
-              'NEXT RENEWAL DATE',
-              style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-            ),
-            VSpace.md,
-            ListTile(
-              tileColor: AppColors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.medium,
-                side: const BorderSide(color: AppColors.border),
-              ),
-              leading: const Icon(Icons.calendar_today_rounded, color: AppColors.primary),
-              title: Text(
-                DateFormat('dd MMMM yyyy').format(_selectedDate),
-                style: AppTextStyles.body,
-              ),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-              onTap: _presentDatePicker,
-            ),
-            VSpace.xl,
-
-            PrimaryButton(
-              text: _isEditMode ? 'Update Subscription' : 'Track Subscription',
-              onPressed: isLoading ? null : _submitForm,
-              isLoading: isLoading,
-            ),
-          ],
+  Widget _buildCycleTab(String label, BillingCycle cycle) {
+    final isActive = _selectedCycle == cycle;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCycle = cycle;
+          _nextBillingDate = _calculateNextBillingDate(_startDate, _selectedCycle);
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isActive ? AppColors.background : AppColors.primaryText,
+            fontSize: 13,
+          ),
         ),
       ),
     );
