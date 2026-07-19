@@ -29,6 +29,7 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   return TransactionRepositoryImpl(
     remoteDataSource: ref.watch(transactionRemoteDataSourceProvider),
     localDataSource: ref.watch(transactionLocalDataSourceProvider),
+    ref: ref,
   );
 });
 
@@ -143,6 +144,10 @@ class TransactionController extends AsyncNotifier<void> {
     required TransactionCategory category,
     String? note,
     required DateTime date,
+    bool isSplit = false,
+    String? splitWith,
+    double? splitPercentage,
+    bool isSplitPaid = false,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -160,6 +165,10 @@ class TransactionController extends AsyncNotifier<void> {
         note: note,
         transactionDate: date,
         createdAt: DateTime.now(),
+        isSplit: isSplit,
+        splitWith: splitWith,
+        splitPercentage: splitPercentage,
+        isSplitPaid: isSplitPaid,
       );
 
       await ref.read(transactionRepositoryProvider).addTransaction(transaction);
@@ -175,6 +184,10 @@ class TransactionController extends AsyncNotifier<void> {
     String? note,
     required DateTime date,
     required DateTime createdAt,
+    bool isSplit = false,
+    String? splitWith,
+    double? splitPercentage,
+    bool isSplitPaid = false,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -191,6 +204,10 @@ class TransactionController extends AsyncNotifier<void> {
         note: note,
         transactionDate: date,
         createdAt: createdAt,
+        isSplit: isSplit,
+        splitWith: splitWith,
+        splitPercentage: splitPercentage,
+        isSplitPaid: isSplitPaid,
       );
 
       await ref.read(transactionRepositoryProvider).updateTransaction(transaction);

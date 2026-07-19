@@ -54,7 +54,12 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
       if (transaction.type == TransactionType.income) {
         totalIncome += transaction.amount;
       } else {
-        totalExpense += transaction.amount;
+        double expenseAmount = transaction.amount;
+        if (transaction.isSplit) {
+          final share = transaction.splitPercentage ?? 50.0;
+          expenseAmount -= (transaction.amount * (share / 100));
+        }
+        totalExpense += expenseAmount;
       }
     }
 

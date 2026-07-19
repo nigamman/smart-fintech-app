@@ -14,6 +14,7 @@ class TransactionTile extends ConsumerWidget {
   final DateTime date;
   final TransactionType type;
   final VoidCallback? onTap;
+  final bool isEncrypted;
 
   const TransactionTile({
     super.key,
@@ -23,6 +24,7 @@ class TransactionTile extends ConsumerWidget {
     required this.date,
     required this.type,
     this.onTap,
+    this.isEncrypted = false,
   });
 
   @override
@@ -35,37 +37,50 @@ class TransactionTile extends ConsumerWidget {
       contentPadding: EdgeInsets.zero,
 
       leading: CircleAvatar(
-        backgroundColor: isIncome
-            ? AppColors.income.withValues(alpha: 0.12)
-            : AppColors.expense.withValues(alpha: 0.12),
+        backgroundColor: isEncrypted
+            ? Colors.grey.withOpacity(0.12)
+            : (isIncome
+                ? AppColors.income.withValues(alpha: 0.12)
+                : AppColors.expense.withValues(alpha: 0.12)),
 
         child: Icon(
-          isIncome
-              ? Icons.south_west_rounded
-              : Icons.north_east_rounded,
-          color: isIncome
-              ? AppColors.income
-              : AppColors.expense,
+          isEncrypted
+              ? Icons.lock_outline_rounded
+              : (isIncome
+                  ? Icons.south_west_rounded
+                  : Icons.north_east_rounded),
+          color: isEncrypted
+              ? Colors.grey
+              : (isIncome
+                  ? AppColors.income
+                  : AppColors.expense),
           size: 18,
         ),
       ),
 
       title: Text(
-        title,
-        style: AppTextStyles.body,
+        isEncrypted ? 'Encrypted Sync Backup' : title,
+        style: AppTextStyles.body.copyWith(
+          color: isEncrypted ? Colors.grey : null,
+          fontStyle: isEncrypted ? FontStyle.italic : null,
+        ),
       ),
 
       subtitle: Text(
-        '$category • ${DateFormat('dd MMM').format(date)}',
+        isEncrypted
+            ? 'Zero-Knowledge Protected • ${DateFormat('dd MMM').format(date)}'
+            : '$category • ${DateFormat('dd MMM').format(date)}',
         style: AppTextStyles.caption,
       ),
 
       trailing: Text(
-        '${isIncome ? '+' : '-'}$currency${amount.toStringAsFixed(0)}',
+        isEncrypted ? '••••' : '${isIncome ? '+' : '-'}$currency${amount.toStringAsFixed(0)}',
         style: AppTextStyles.body.copyWith(
-          color: isIncome
-              ? AppColors.income
-              : AppColors.expense,
+          color: isEncrypted
+              ? Colors.grey
+              : (isIncome
+                  ? AppColors.income
+                  : AppColors.expense),
           fontWeight: FontWeight.bold,
         ),
       ),

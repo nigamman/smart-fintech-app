@@ -15,6 +15,7 @@ import '../../../savings_goal/domain/entities/savings_goal.dart';
 import '../../../savings_goal/presentation/providers/savings_goal_providers.dart';
 import '../../../subscription/domain/entities/subscription.dart';
 import '../../../subscription/presentation/providers/subscription_providers.dart';
+import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../domain/entities/budget.dart';
 import '../providers/budget_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
@@ -783,6 +784,96 @@ class PlanningScreen extends ConsumerWidget {
                         ),
                       );
                     }).toList(),
+                  ),
+                );
+              },
+            ),
+            VSpace.xl,
+
+            // 4. Split Bills Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Split Bills & Tabs',
+                  style: AppTextStyles.title.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/split-ledger'),
+                  child: const Text('Manage Splits'),
+                ),
+              ],
+            ),
+            VSpace.sm,
+            ref.watch(transactionsStreamProvider).when(
+              loading: () => const SkeletonLoader.card(height: 80),
+              error: (err, stack) => Text('Error: $err'),
+              data: (transactions) {
+                final splitTransactions = transactions.where((tx) => tx.isSplit && !tx.isSplitPaid).toList();
+                
+                double totalOwed = 0.0;
+                final Set<String> debtors = {};
+                for (final tx in splitTransactions) {
+                  final owes = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
+                  totalOwed += owes;
+                  debtors.add(tx.splitWith ?? 'Unknown');
+                }
+
+                return InkWell(
+                  onTap: () => context.push('/split-ledger'),
+                  borderRadius: AppRadius.large,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF131B2E) : Colors.white,
+                      borderRadius: AppRadius.large,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.income.withValues(alpha: 0.1),
+                          child: const Icon(
+                            Icons.splitscreen_rounded,
+                            color: AppColors.income,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                totalOwed > 0
+                                    ? '$currency${totalOwed.toStringAsFixed(0)} pending repayment'
+                                    : 'All settled up!',
+                                style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: totalOwed > 0 ? AppColors.income : AppColors.secondaryText,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                totalOwed > 0
+                                    ? 'From ${debtors.length} friend${debtors.length > 1 ? 's' : ''}'
+                                    : 'No outstanding balances',
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: AppColors.secondaryText,
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

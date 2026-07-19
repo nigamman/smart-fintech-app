@@ -45,6 +45,7 @@ class RecentTransactions extends StatelessWidget {
               amount: tx.amount,
               date: tx.transactionDate,
               type: tx.type,
+              isEncrypted: tx.isEncrypted,
             ),
           ),
       ],

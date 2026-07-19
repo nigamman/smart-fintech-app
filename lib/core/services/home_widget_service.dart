@@ -107,11 +107,17 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
       final type = data['type'] as String;
       final amount = (data['amount'] as num).toDouble();
       final category = data['category'] as String? ?? 'other';
+      final isSplit = data['isSplit'] as bool? ?? false;
+      final splitPercentage = (data['splitPercentage'] as num?)?.toDouble() ?? 50.0;
 
       if (type == 'income') {
         totalIncome += amount;
       } else {
-        totalExpense += amount;
+        double expenseAmount = amount;
+        if (isSplit) {
+          expenseAmount -= (amount * (splitPercentage / 100));
+        }
+        totalExpense += expenseAmount;
         categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
       }
     }

@@ -19,11 +19,13 @@ class SafeToSpendSmallWidgetProvider : HomeWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.safe_to_spend_small_widget_layout).apply {
                 // Get data saved from Flutter
                 val safeToSpendText = widgetData.getString("safe_to_spend_text", "₹0") ?: "₹0"
+                val totalBalanceText = widgetData.getString("total_balance_text", "Total Cash: ₹0") ?: "Total Cash: ₹0"
                 val remainingDaysText = widgetData.getString("remaining_days_text", "-- days remaining") ?: "-- days remaining"
 
                 // Update views
                 setTextViewText(R.id.widget_title, "Safe Today")
                 setTextViewText(R.id.widget_safe_to_spend, safeToSpendText)
+                setTextViewText(R.id.widget_total_balance, totalBalanceText)
                 setTextViewText(R.id.widget_remaining_days, remainingDaysText)
 
                 // 1. Tapping the widget body deep-links to Dashboard screen
@@ -36,6 +38,7 @@ class SafeToSpendSmallWidgetProvider : HomeWidgetProvider() {
                 // RemoteViews requires a view ID, but we can set it on widget_title/widget_safe_to_spend or layout children
                 setOnClickPendingIntent(R.id.widget_safe_to_spend, dashboardIntent)
                 setOnClickPendingIntent(R.id.widget_title, dashboardIntent)
+                setOnClickPendingIntent(R.id.widget_total_balance, dashboardIntent)
 
                 // 2. Tapping the custom "+" button deep-links to Add Transaction screen
                 val addExpenseIntent = HomeWidgetLaunchIntent.getActivity(

@@ -13,6 +13,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/transaction_providers.dart';
 
@@ -305,6 +306,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                   );
                 }
 
+                // Check if any transactions are encrypted and locked
+                final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
+                final preferences = ref.watch(preferencesProvider);
+                final isLocked = hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null);
+
                 // Group transactions by date
                 final grouped = <String, List<Transaction>>{};
                 for (final tx in transactions) {
@@ -314,67 +320,128 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
                 final groupKeys = grouped.keys.toList();
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  itemCount: groupKeys.length,
-                  itemBuilder: (context, index) {
-                    final dateKey = groupKeys[index];
-                    final dateTxs = grouped[dateKey]!;
+                return Column(
+                  children: [
+                    if (isLocked) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.lock_rounded, color: Colors.amber, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Zero-Knowledge Sync Locked',
+                                    style: AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Some transactions are encrypted in your remote backup. Enter your passphrase to decrypt and synchronize them locally.',
+                                style: AppTextStyles.caption.copyWith(fontSize: 12),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showUnlockDialog(context),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.amber,
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.key_rounded, size: 16),
+                                  label: const Text('Unlock Backups', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        itemCount: groupKeys.length,
+                        itemBuilder: (context, index) {
+                          final dateKey = groupKeys[index];
+                          final dateTxs = grouped[dateKey]!;
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20, bottom: 8),
-                          child: Text(
-                            dateKey,
-                            style: AppTextStyles.label.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.secondaryText,
-                            ),
-                          ),
-                        ),
-                        Card(
-                          margin: EdgeInsets.zero,
-                          elevation: 0,
-                          color: AppColors.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppRadius.large,
-                            side: const BorderSide(color: AppColors.border),
-                          ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: dateTxs.length,
-                            separatorBuilder: (context, i) => const Divider(
-                              height: 1,
-                              indent: 56,
-                              endIndent: 16,
-                            ),
-                            itemBuilder: (context, i) {
-                              final tx = dateTxs[i];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 20, bottom: 8),
+                                child: Text(
+                                  dateKey,
+                                  style: AppTextStyles.label.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.secondaryText,
+                                  ),
                                 ),
-                                child: TransactionTile(
-                                  title: tx.note != null && tx.note!.isNotEmpty
-                                      ? tx.note!
-                                      : tx.category.name[0].toUpperCase() + tx.category.name.substring(1),
-                                  category: tx.category.name[0].toUpperCase() + tx.category.name.substring(1),
-                                  amount: tx.amount,
-                                  date: tx.transactionDate,
-                                  type: tx.type,
-                                  onTap: () => _showTransactionActions(context, tx),
+                              ),
+                              Card(
+                                margin: EdgeInsets.zero,
+                                elevation: 0,
+                                color: AppColors.surface,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: AppRadius.large,
+                                  side: const BorderSide(color: AppColors.border),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: dateTxs.length,
+                                  separatorBuilder: (context, i) => const Divider(
+                                    height: 1,
+                                    indent: 56,
+                                    endIndent: 16,
+                                  ),
+                                  itemBuilder: (context, i) {
+                                    final tx = dateTxs[i];
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 4,
+                                      ),
+                                      child: TransactionTile(
+                                        title: tx.note != null && tx.note!.isNotEmpty
+                                            ? tx.note!
+                                            : tx.category.name[0].toUpperCase() + tx.category.name.substring(1),
+                                        category: tx.category.name[0].toUpperCase() + tx.category.name.substring(1),
+                                        amount: tx.amount,
+                                        date: tx.transactionDate,
+                                        type: tx.type,
+                                        isEncrypted: tx.isEncrypted,
+                                        onTap: tx.isEncrypted
+                                            ? () => _showUnlockDialog(context)
+                                            : () => _showTransactionActions(context, tx),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -456,6 +523,52 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 'Delete',
                 style: TextStyle(color: AppColors.expense),
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showUnlockDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Unlock Zero-Knowledge Sync'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter your private passphrase to decrypt and sync your transactions.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Passphrase',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final passphrase = controller.text.trim();
+                if (passphrase.isNotEmpty) {
+                  ref.read(preferencesProvider.notifier).setPassphrase(passphrase);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sync unlocked successfully!')),
+                  );
+                }
+              },
+              child: const Text('Unlock'),
             ),
           ],
         );

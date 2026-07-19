@@ -102,7 +102,12 @@ final budgetProgressProvider = Provider<AsyncValue<MonthlyBudgetProgress>>((ref)
               // Calculate total spent
               double totalSpent = 0.0;
               for (final tx in currentMonthExpenses) {
-                totalSpent += tx.amount;
+                double spentAmount = tx.amount;
+                if (tx.isSplit) {
+                  final share = tx.splitPercentage ?? 50.0;
+                  spentAmount -= (tx.amount * (share / 100));
+                }
+                totalSpent += spentAmount;
               }
 
               // Find overall monthly budget (where category == null)
@@ -120,7 +125,12 @@ final budgetProgressProvider = Provider<AsyncValue<MonthlyBudgetProgress>>((ref)
               // Group expenses by category
               final categoryExpenses = <TransactionCategory, double>{};
               for (final tx in currentMonthExpenses) {
-                categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + tx.amount;
+                double spentAmount = tx.amount;
+                if (tx.isSplit) {
+                  final share = tx.splitPercentage ?? 50.0;
+                  spentAmount -= (tx.amount * (share / 100));
+                }
+                categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + spentAmount;
               }
 
               // Build category budget progress list

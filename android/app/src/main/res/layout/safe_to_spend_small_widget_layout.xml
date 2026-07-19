@@ -41,6 +41,16 @@
                 android:textStyle="bold"
                 android:layout_marginTop="4dp"
                 android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:id="@+id/widget_total_balance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total Cash: ₹0"
+                android:textColor="#7F8295"
+                android:textSize="11sp"
+                android:layout_marginTop="2dp"
+                android:fontFamily="sans-serif" />
         </LinearLayout>
 
         <!-- Bottom Left Remaining Days -->

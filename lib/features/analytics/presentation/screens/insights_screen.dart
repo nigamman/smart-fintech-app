@@ -13,6 +13,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../budget/presentation/providers/budget_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../providers/analytics_providers.dart';
+import '../widgets/ai_counsel_card.dart';
 
 class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
@@ -112,6 +113,8 @@ class InsightsScreen extends ConsumerWidget {
                 return ListView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
+                    const AiCounselCard(),
+                    VSpace.xl,
                     // Summary Stats
                     _buildSummaryStats(context, data, currency, isDark),
                     VSpace.xl,

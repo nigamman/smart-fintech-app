@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../transaction/data/models/transaction_model.dart';
 import '../../data/datasources/dashboard_remote_datasource.dart';
 import '../../data/datasources/dashboard_remote_datasource_impl.dart';
 import '../../data/repositories/dashboard_repositories.dart';
@@ -8,9 +9,11 @@ import '../../data/repositories/dashboard_repository_impl.dart';
 import '../../domain/entities/dashboard_data.dart';
 import '../../../../core/services/home_widget_service.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
+import '../../../transaction/data/models/transaction_model.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../../core/enums/transaction_category.dart';
 import '../../../../core/enums/transaction_type.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 
 final dashboardRemoteDataSourceProvider = Provider<DashboardRemoteDataSource>((ref) {
   return DashboardRemoteDataSourceImpl(
@@ -26,14 +29,63 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
 });
 
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
-  // Automatically re-fetch dashboard when authState changes (e.g. login/logout)
-  ref.watch(authStateProvider);
-  
   // Automatically watch transactions stream to trigger refreshes when a transaction is added/modified
   final transactionsAsync = ref.watch(transactionsStreamProvider);
   final transactions = transactionsAsync.value ?? [];
   
-  final data = await ref.read(dashboardRepositoryProvider).getDashboardData();
+  // Watch profile to automatically trigger refreshes on profile changes
+  final userAsync = ref.watch(userProfileStreamProvider);
+  final user = userAsync.value;
+
+  if (user == null) {
+    return DashboardData(
+      userName: '',
+      monthlyIncome: 0.0,
+      monthlySavingsGoal: 0.0,
+      totalIncome: 0.0,
+      totalExpense: 0.0,
+      totalBalance: 0.0,
+      safeToSpend: 0.0,
+      recentTransactions: [],
+    );
+  }
+
+  double totalIncome = 0;
+  double totalExpense = 0;
+
+  for (final transaction in transactions) {
+    if (transaction.isEncrypted) continue;
+
+    if (transaction.type == TransactionType.income) {
+      totalIncome += transaction.amount;
+    } else {
+      double expenseAmount = transaction.amount;
+      if (transaction.isSplit) {
+        final share = transaction.splitPercentage ?? 50.0;
+        expenseAmount -= (transaction.amount * (share / 100));
+      }
+      totalExpense += expenseAmount;
+    }
+  }
+
+  final totalBalance = totalIncome - totalExpense;
+
+  final now = DateTime.now();
+  final lastDay = DateTime(now.year, now.month + 1, 0).day;
+  final remainingDays = (lastDay - now.day) + 1;
+
+  final safeToSpend = (user.monthlyIncome - totalExpense) / remainingDays;
+
+  final data = DashboardData(
+    userName: user.name,
+    monthlyIncome: user.monthlyIncome,
+    monthlySavingsGoal: user.monthlySavingsGoal,
+    totalIncome: totalIncome,
+    totalExpense: totalExpense,
+    totalBalance: totalBalance,
+    safeToSpend: safeToSpend,
+    recentTransactions: transactions.take(5).cast<TransactionModel>().toList(),
+  );
   
   // Get preferred currency
   final currency = ref.read(preferencesProvider).currency;
@@ -41,6 +93,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
   // Calculate dynamic top categories based on expense transaction frequency
   final categoryCounts = <TransactionCategory, int>{};
   for (final tx in transactions) {
+    if (tx.isEncrypted) continue;
     if (tx.type == TransactionType.expense) {
       categoryCounts[tx.category] = (categoryCounts[tx.category] ?? 0) + 1;
     }

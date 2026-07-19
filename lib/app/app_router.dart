@@ -11,6 +11,7 @@ import '../features/auth/presentation/screens/splash_screen.dart';
 import '../features/transaction/domain/entities/transaction.dart';
 import '../features/transaction/presentation/screens/add_transaction_screen.dart';
 import '../features/transaction/presentation/screens/transaction_list_screen.dart';
+import '../features/transaction/presentation/screens/split_ledger_screen.dart';
 import '../features/budget/domain/entities/budget.dart';
 import '../features/budget/presentation/screens/budget_screen.dart';
 import '../features/budget/presentation/screens/add_budget_screen.dart';
@@ -100,6 +101,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             initialCategory: initialCategory,
           );
         },
+      ),
+      GoRoute(
+        path: '/split-ledger',
+        builder: (context, state) => const SplitLedgerScreen(),
       ),
 
       GoRoute(

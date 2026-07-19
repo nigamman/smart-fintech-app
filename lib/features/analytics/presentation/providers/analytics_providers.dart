@@ -105,8 +105,13 @@ final analyticsDataProvider = Provider<AsyncValue<AnalyticsData>>((ref) {
           if (tx.type == TransactionType.income) {
             totalIncome += tx.amount;
           } else {
-            totalExpense += tx.amount;
-            categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + tx.amount;
+            double expenseAmount = tx.amount;
+            if (tx.isSplit) {
+              final share = tx.splitPercentage ?? 50.0;
+              expenseAmount -= (tx.amount * (share / 100));
+            }
+            totalExpense += expenseAmount;
+            categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + expenseAmount;
           }
         }
       }
@@ -158,7 +163,12 @@ final analyticsDataProvider = Provider<AsyncValue<AnalyticsData>>((ref) {
             if (tx.type == TransactionType.income) {
               mIncome += tx.amount;
             } else {
-              mExpense += tx.amount;
+              double expenseAmount = tx.amount;
+              if (tx.isSplit) {
+                final share = tx.splitPercentage ?? 50.0;
+                expenseAmount -= (tx.amount * (share / 100));
+              }
+              mExpense += expenseAmount;
             }
           }
         }

@@ -12,6 +12,9 @@ import '../../../transaction/presentation/screens/activity_screen.dart';
 import '../../../budget/presentation/screens/planning_screen.dart';
 import '../../../analytics/presentation/screens/insights_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
+import '../../../transaction/presentation/providers/transaction_providers.dart';
+import '../../../transaction/domain/entities/transaction.dart';
 
 final mainNavigationIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -30,6 +33,128 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     InsightsScreen(),
     SettingsScreen(),
   ];
+
+  bool _isUnlockSheetOpen = false;
+
+  void _showAutoUnlockSheet(BuildContext context) {
+    if (_isUnlockSheetOpen) return;
+    _isUnlockSheetOpen = true;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        final controller = TextEditingController();
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD5B266).withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.lock_person_rounded,
+                    color: Color(0xFFD5B266),
+                    size: 32,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Unlock Encrypted Ledger',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This account has Zero-Knowledge Sync enabled. Enter your sync passphrase to decrypt and recover your transaction history locally.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySecondary,
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: controller,
+                obscureText: true,
+                style: AppTextStyles.body,
+                decoration: InputDecoration(
+                  labelText: 'Sync Passphrase',
+                  hintText: 'Enter your passphrase',
+                  prefixIcon: const Icon(Icons.key_rounded),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  final passphrase = controller.text.trim();
+                  if (passphrase.isNotEmpty) {
+                    ref.read(preferencesProvider.notifier).setPassphrase(passphrase);
+                    Navigator.pop(context);
+                    _isUnlockSheetOpen = false;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Ledger decrypted successfully! Welcome back.'),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD5B266),
+                  foregroundColor: isDark ? const Color(0xFF020617) : Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Unlock Ledger',
+                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF020617)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _isUnlockSheetOpen = false;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Viewing app in locked sync mode. Cloud entries are hidden.'),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Skip for now',
+                  style: AppTextStyles.bodySecondary.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   StreamSubscription<Uri?>? _widgetClickSubscription;
 
@@ -156,6 +281,17 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     context.push('/add-subscription');
                   },
                 ),
+                _buildActionTile(
+                  context,
+                  icon: Icons.splitscreen_rounded,
+                  color: Colors.deepPurpleAccent,
+                  title: 'Split Ledger',
+                  subtitle: 'Split bills and manage roommate balances',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/split-ledger');
+                  },
+                ),
               ],
             ),
           ),
@@ -204,6 +340,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<Transaction>>>(transactionsStreamProvider, (previous, next) {
+      final transactions = next.value ?? [];
+      final preferences = ref.read(preferencesProvider);
+      final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
+      final isLocked = hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null);
+
+      if (isLocked) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showAutoUnlockSheet(context);
+        });
+      }
+    });
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
 

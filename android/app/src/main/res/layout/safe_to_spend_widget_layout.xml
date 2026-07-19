@@ -64,12 +64,24 @@
                 android:focusable="true" />
         </RelativeLayout>
 
+        <!-- Total Cash Balance Display -->
+        <TextView
+            android:id="@+id/widget_total_balance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/amount_row"
+            android:text="Total Cash: ₹0"
+            android:textColor="#7F8295"
+            android:textSize="11sp"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif" />
+
         <!-- Dynamic Category and Coffee Buttons Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/amount_row"
-            android:layout_marginTop="12dp"
+            android:layout_below="@id/widget_total_balance"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <TextView
@@ -138,11 +150,6 @@
         </LinearLayout>
 
         <!-- Hidden views to retain code compatibility in Kotlin widget updates -->
-        <TextView
-            android:id="@+id/widget_total_balance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
 
         <TextView
             android:id="@+id/widget_remaining_days"

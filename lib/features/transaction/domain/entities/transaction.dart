@@ -11,6 +11,12 @@ class Transaction {
   final String? note;
   final DateTime transactionDate;
   final DateTime createdAt;
+  final bool isSplit;
+  final String? splitWith;
+  final double? splitPercentage;
+  final bool isSplitPaid;
+  final bool isEncrypted;
+  final String? encryptedData;
 
   const Transaction({
     required this.id,
@@ -21,6 +27,11 @@ class Transaction {
     this.note,
     required this.transactionDate,
     required this.createdAt,
+    this.isSplit = false,
+    this.splitWith,
+    this.splitPercentage = 50.0,
+    this.isSplitPaid = false,
+    this.isEncrypted = false,
+    this.encryptedData,
   });
-
 }

@@ -38,6 +38,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   late TransactionType _selectedType;
   late TransactionCategory _selectedCategory;
   late DateTime _selectedDate;
+  late bool _isSplit;
+  late final TextEditingController _splitWithController;
+  late double _splitPercentage;
+  late bool _isSplitPaid;
 
   bool get _isEditMode => widget.transaction != null;
 
@@ -54,12 +58,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         widget.initialCategory ??
         (_selectedType == TransactionType.income ? TransactionCategory.salary : TransactionCategory.food);
     _selectedDate = tx?.transactionDate ?? DateTime.now();
+    _isSplit = tx?.isSplit ?? false;
+    _splitWithController = TextEditingController(text: tx?.splitWith ?? '');
+    _splitPercentage = tx?.splitPercentage ?? 50.0;
+    _isSplitPaid = tx?.isSplitPaid ?? false;
   }
 
   @override
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
+    _splitWithController.dispose();
     super.dispose();
   }
 
@@ -133,6 +142,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
+    if (_isSplit && _selectedType == TransactionType.expense) {
+      if (_splitWithController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enter a friend's name to split the bill")),
+        );
+        return;
+      }
+    }
+
     final notifier = ref.read(transactionControllerProvider.notifier);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
@@ -147,6 +165,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           note: _noteController.text.trim(),
           date: _selectedDate,
           createdAt: widget.transaction!.createdAt,
+          isSplit: _selectedType == TransactionType.expense ? _isSplit : false,
+          splitWith: _selectedType == TransactionType.expense && _isSplit ? _splitWithController.text.trim() : null,
+          splitPercentage: _selectedType == TransactionType.expense && _isSplit ? _splitPercentage : 50.0,
+          isSplitPaid: _selectedType == TransactionType.expense && _isSplit ? _isSplitPaid : false,
         );
       } else {
         await notifier.addTransaction(
@@ -155,6 +177,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           category: _selectedCategory,
           note: _noteController.text.trim(),
           date: _selectedDate,
+          isSplit: _selectedType == TransactionType.expense ? _isSplit : false,
+          splitWith: _selectedType == TransactionType.expense && _isSplit ? _splitWithController.text.trim() : null,
+          splitPercentage: _selectedType == TransactionType.expense && _isSplit ? _splitPercentage : 50.0,
+          isSplitPaid: _selectedType == TransactionType.expense && _isSplit ? _isSplitPaid : false,
         );
       }
       scaffoldMessenger.showSnackBar(
@@ -518,6 +544,121 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     return null;
                   },
                 ),
+
+                // Split Bill Section (only for expense)
+                if (_selectedType == TransactionType.expense) ...[
+                  VSpace.xl,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.medium,
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.splitscreen_rounded, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Split this bill',
+                              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        Switch.adaptive(
+                          value: _isSplit,
+                          activeColor: AppColors.accent,
+                          onChanged: (val) {
+                            setState(() {
+                              _isSplit = val;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_isSplit) ...[
+                    VSpace.md,
+                    AppTextField(
+                      controller: _splitWithController,
+                      label: "Friend's Name",
+                      prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary),
+                    ),
+                    VSpace.md,
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadius.medium,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Friend's Share: ${_splitPercentage.toStringAsFixed(0)}%",
+                                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                "Your Share: ${(100 - _splitPercentage).toStringAsFixed(0)}%",
+                                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Slider(
+                            value: _splitPercentage,
+                            min: 1,
+                            max: 99,
+                            divisions: 98,
+                            activeColor: AppColors.accent,
+                            inactiveColor: AppColors.border,
+                            label: '${_splitPercentage.toStringAsFixed(0)}%',
+                            onChanged: (val) {
+                              setState(() {
+                                _splitPercentage = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isEditMode) ...[
+                      VSpace.md,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: AppRadius.medium,
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Mark as Repaid / Settled",
+                              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+                            ),
+                            Checkbox(
+                              value: _isSplitPaid,
+                              activeColor: AppColors.accent,
+                              onChanged: (val) {
+                                setState(() {
+                                  _isSplitPaid = val ?? false;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ],
                 VSpace.xxl,
 
                 // Save Action Button
