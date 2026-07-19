@@ -113,21 +113,24 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                       ),
                     ),
                   ),
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.transparent,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.primary, width: 1.0),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'R',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                          fontSize: 11,
+                  GestureDetector(
+                    onTap: () => context.push('/settings'),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.transparent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.primary, width: 1.0),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'R',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ),
@@ -237,6 +240,23 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (progress.totalLimit > 0) ...[
+              if (progress.isExceeded)
+                _buildBudgetAlertBanner(
+                  context,
+                  '🚨 Budget Exceeded!',
+                  'You have spent $currency${progress.totalSpent.toStringAsFixed(0)} which exceeds your overall budget limit of $currency${progress.totalLimit.toStringAsFixed(0)} by $currency${(progress.totalSpent - progress.totalLimit).toStringAsFixed(0)}.',
+                  const Color(0xFFBC5B3E),
+                )
+              else if (progress.isWarning80)
+                _buildBudgetAlertBanner(
+                  context,
+                  '⚠️ Warning: Near Budget Limit',
+                  'You have spent ${(progress.progressPercentage * 100).toStringAsFixed(0)}% of your monthly budget limit. Please spend cautiously.',
+                  const Color(0xFFC8A05B),
+                ),
+              const SizedBox(height: 12),
+            ],
             // MONTHLY LIMIT card
             Container(
               padding: const EdgeInsets.all(18),
@@ -298,68 +318,82 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                 final catPct = catProgress.limit > 0 ? (catProgress.spent / catProgress.limit) : 0.0;
                 final catName = catProgress.category.name[0].toUpperCase() + catProgress.category.name.substring(1);
 
+                final budgets = ref.read(budgetsStreamProvider).value ?? [];
+                final budgetEntity = budgets.cast<Budget?>().firstWhere(
+                  (b) => b?.id == catProgress.budgetId,
+                  orElse: () => null,
+                );
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
+                  child: InkWell(
+                    onTap: budgetEntity == null
+                        ? null
+                        : () => context.push('/add-budget', extra: budgetEntity),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border, width: 1.0),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _getCategoryColor(catProgress.category),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: _getCategoryColor(catProgress.category),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    catName,
+                                    style: AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 10),
                               Text(
-                                catName,
-                                style: AppTextStyles.body.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: Colors.white,
+                                '$currency${catProgress.spent.toStringAsFixed(0)} / $currency${catProgress.limit.toStringAsFixed(0)}',
+                                style: AppTextStyles.monoSecondary.copyWith(
+                                  fontSize: 11.5,
+                                  color: AppColors.primaryText.withOpacity(0.9),
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            '$currency${catProgress.spent.toStringAsFixed(0)} / $currency${catProgress.limit.toStringAsFixed(0)}',
-                            style: AppTextStyles.monoSecondary.copyWith(
-                              fontSize: 11.5,
-                              color: AppColors.primaryText.withOpacity(0.9),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: AnimatedLinearProgressBar(
+                              progress: catPct,
+                              minHeight: 5,
+                              backgroundColor: AppColors.border.withOpacity(0.3),
+                              valueColor: _getProgressBarColor(catPct),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: AnimatedLinearProgressBar(
-                          progress: catPct,
-                          minHeight: 5,
-                          backgroundColor: AppColors.border.withOpacity(0.3),
-                          valueColor: _getProgressBarColor(catPct),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               }),
 
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: () => context.push('/budget'),
+              onTap: () => context.push('/add-budget'),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 alignment: Alignment.center,
@@ -368,7 +402,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                   border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.0),
                 ),
                 child: Text(
-                  'Manage Budgets',
+                  'Add Category Budget',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -980,6 +1014,52 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBudgetAlertBanner(BuildContext context, String title, String message, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.4), width: 1.0),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            color == const Color(0xFFBC5B3E) ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: AppTextStyles.caption.copyWith(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 11.5,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

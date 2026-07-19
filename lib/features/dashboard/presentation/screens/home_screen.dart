@@ -97,25 +97,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           data: (dashboardData) {
             final List<Map<String, dynamic>> attentionAlerts = [];
 
-            // Budget Alert
+            // Budget Alerts (Overall + Category Specific)
             budgetProgressAsync.whenData((progress) {
+              // 1. Overall monthly budget alerts
               if (progress.totalLimit > 0) {
                 if (progress.isExceeded) {
                   attentionAlerts.add({
-                    'text': 'Food budget at 100%',
-                    'subtitle': 'Spent limits completely consumed.',
+                    'text': 'Monthly budget exceeded',
+                    'subtitle': 'Limit $currency${progress.totalLimit.toStringAsFixed(0)} • Spent $currency${progress.totalSpent.toStringAsFixed(0)}',
                     'color': AppColors.expense,
                     'icon': Icons.warning_amber_rounded,
-                    'tag': 'Food',
+                    'tag': 'Limit',
                   });
                 } else if (progress.isWarning80) {
                   final remaining = progress.totalLimit - progress.totalSpent;
+                  final pct = (progress.progressPercentage * 100).toStringAsFixed(0);
                   attentionAlerts.add({
-                    'text': 'Food budget at 90%',
-                    'subtitle': '$currency${remaining.toStringAsFixed(0)} left for the rest of the month',
-                    'color': AppColors.warning,
+                    'text': 'Monthly budget at $pct%',
+                    'subtitle': '$currency${remaining.toStringAsFixed(0)} remaining for the month',
+                    'color': const Color(0xFFC8A05B),
                     'icon': Icons.warning_amber_rounded,
-                    'tag': 'Food',
+                    'tag': 'Limit',
+                  });
+                }
+              }
+
+              // 2. Individual category budget alerts
+              for (final catProgress in progress.categoryProgresses) {
+                final catName = catProgress.category.name[0].toUpperCase() + catProgress.category.name.substring(1);
+                if (catProgress.isExceeded) {
+                  attentionAlerts.add({
+                    'text': '$catName budget exceeded',
+                    'subtitle': 'Spent limit completely consumed.',
+                    'color': AppColors.expense,
+                    'icon': Icons.warning_amber_rounded,
+                    'tag': 'Budget',
+                  });
+                } else if (catProgress.isWarning80) {
+                  final remaining = catProgress.limit - catProgress.spent;
+                  final pct = (catProgress.progressPercentage * 100).toStringAsFixed(0);
+                  attentionAlerts.add({
+                    'text': '$catName budget at $pct%',
+                    'subtitle': '$currency${remaining.toStringAsFixed(0)} left for this category',
+                    'color': const Color(0xFFC8A05B),
+                    'icon': Icons.warning_amber_rounded,
+                    'tag': 'Budget',
                   });
                 }
               }
@@ -600,6 +626,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               fontSize: 11.5,
               fontWeight: FontWeight.bold,
               color: AppColors.primaryText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBudgetAlertBanner(BuildContext context, String title, String message, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.4), width: 1.0),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            color == const Color(0xFFBC5B3E) ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: AppTextStyles.caption.copyWith(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 11.5,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

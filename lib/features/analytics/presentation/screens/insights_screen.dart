@@ -147,21 +147,24 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> with SingleTick
                             ),
                           ),
                         ),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.transparent,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.primary, width: 1.0),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'R',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                                fontSize: 11,
+                        GestureDetector(
+                          onTap: () => context.push('/settings'),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.transparent,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.primary, width: 1.0),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'R',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
                           ),

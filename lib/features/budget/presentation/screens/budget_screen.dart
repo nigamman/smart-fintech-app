@@ -127,30 +127,16 @@ class BudgetScreen extends ConsumerWidget {
                               'Monthly Budget',
                               style: AppTextStyles.h3,
                             ),
-                            if (progress.monthlyBudget != null)
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined, size: 20),
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                onPressed: () {
-                                  context.push('/add-budget', extra: progress.monthlyBudget);
-                                },
-                              ),
                           ],
                         ),
                         VSpace.md,
                         if (isNoLimitSet) ...[
                           Text(
-                            'No monthly budget limit set yet.',
+                            'No monthly budget limit set yet. Set your income in the Settings tab to calculate.',
                             style: AppTextStyles.body.copyWith(
                               color: AppColors.secondaryText,
+                              fontSize: 12,
                             ),
-                          ),
-                          VSpace.md,
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Set Overall Limit'),
-                            onPressed: () => context.push('/add-budget'),
                           ),
                         ] else ...[
                           // Remaining details
@@ -360,7 +346,7 @@ class BudgetScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/add-budget'),
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        foregroundColor: AppColors.background,
         child: const Icon(Icons.add_rounded),
       ),
     );

@@ -27,6 +27,7 @@ import '../features/subscription/presentation/screens/subscription_list_screen.d
 import '../features/subscription/presentation/screens/add_subscription_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
+import '../features/settings/presentation/screens/edit_profile_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
@@ -169,6 +170,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
       ),
 
       GoRoute(
