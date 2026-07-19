@@ -9,7 +9,6 @@ class PreferencesState {
   final ThemeMode themeMode;
   final bool isEncryptionEnabled;
   final String? syncPassphrase;
-  final String geminiApiKey;
 
   const PreferencesState({
     required this.currency,
@@ -17,7 +16,6 @@ class PreferencesState {
     required this.themeMode,
     this.isEncryptionEnabled = false,
     this.syncPassphrase,
-    this.geminiApiKey = '',
   });
 
   PreferencesState copyWith({
@@ -26,7 +24,6 @@ class PreferencesState {
     ThemeMode? themeMode,
     bool? isEncryptionEnabled,
     String? syncPassphrase,
-    String? geminiApiKey,
   }) {
     return PreferencesState(
       currency: currency ?? this.currency,
@@ -34,7 +31,6 @@ class PreferencesState {
       themeMode: themeMode ?? this.themeMode,
       isEncryptionEnabled: isEncryptionEnabled ?? this.isEncryptionEnabled,
       syncPassphrase: syncPassphrase ?? this.syncPassphrase,
-      geminiApiKey: geminiApiKey ?? this.geminiApiKey,
     );
   }
 }
@@ -54,7 +50,6 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
 
     final isEncryptionEnabled = _box.get('isEncryptionEnabled', defaultValue: false) as bool;
     final syncPassphrase = _box.get('syncPassphrase') as String?;
-    final geminiApiKey = _box.get('geminiApiKey', defaultValue: '') as String;
 
     return PreferencesState(
       currency: currency,
@@ -62,7 +57,6 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
       themeMode: themeMode,
       isEncryptionEnabled: isEncryptionEnabled,
       syncPassphrase: syncPassphrase,
-      geminiApiKey: geminiApiKey,
     );
   }
 
@@ -79,11 +73,6 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
   void updateThemeMode(ThemeMode newTheme) {
     _box.put('themeMode', newTheme.index);
     state = state.copyWith(themeMode: newTheme);
-  }
-
-  void updateGeminiApiKey(String key) {
-    _box.put('geminiApiKey', key);
-    state = state.copyWith(geminiApiKey: key);
   }
 
   Future<void> enableEncryption(String passphrase, String userId) async {

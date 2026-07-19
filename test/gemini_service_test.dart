@@ -91,5 +91,37 @@ void main() {
       expect(advice, contains('exceeds your daily Safe-To-Spend'));
       expect(advice, contains('by ₹1200'));
     });
+
+    test('getAffordabilityAdvice handles income addition queries appropriately', () async {
+      final advice = await GeminiService.getAffordabilityAdvice(
+        query: 'can i add 5000 rs as income',
+        safeToSpend: 800.0,
+        totalBalance: 5000.0,
+        totalLimit: 10000.0,
+        totalSpent: 2000.0,
+        upcomingSubscriptions: [],
+        categoryProgresses: [],
+        apiKey: '',
+      );
+
+      expect(advice, startsWith('Yes!'));
+      expect(advice, contains('increase your total cash balance from ₹5000 to ₹10000'));
+    });
+
+    test('getAffordabilityAdvice handles budget status queries appropriately', () async {
+      final advice = await GeminiService.getAffordabilityAdvice(
+        query: 'how is my budget status?',
+        safeToSpend: 1500.0,
+        totalBalance: 5000.0,
+        totalLimit: 10000.0,
+        totalSpent: 3000.0,
+        upcomingSubscriptions: [],
+        categoryProgresses: [],
+        apiKey: '',
+      );
+
+      expect(advice, contains('Here is your current status'));
+      expect(advice, contains('spent ₹3000 out of your ₹10000 limit'));
+    });
   });
 }

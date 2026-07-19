@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../commons/widgets/primary_button.dart';
+import '../../../../commons/widgets/animated_linear_progress_bar.dart';
 import '../../../../commons/widgets/skeleton_loader.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -152,15 +153,13 @@ class PlanningScreen extends ConsumerWidget {
                   VSpace.sm,
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: pct > 1.0 ? 1.0 : pct,
+                    child: AnimatedLinearProgressBar(
+                      progress: pct,
                       minHeight: 8,
                       backgroundColor: isDark
                           ? const Color(0xFF1E293B)
                           : const Color(0xFFF1F5F9),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.accent,
-                      ),
+                      valueColor: AppColors.accent,
                     ),
                   ),
                   VSpace.lg,
@@ -563,13 +562,11 @@ class PlanningScreen extends ConsumerWidget {
                         VSpace.md,
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: pct > 1.0 ? 1.0 : pct,
+                          child: AnimatedLinearProgressBar(
+                            progress: pct,
                             minHeight: 6,
                             backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              progress.isExceeded ? AppColors.expense : AppColors.accent,
-                            ),
+                            valueColor: progress.isExceeded ? AppColors.expense : AppColors.accent,
                           ),
                         ),
                       ],
@@ -674,16 +671,13 @@ class PlanningScreen extends ConsumerWidget {
                               VSpace.md,
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: pct > 1.0 ? 1.0 : pct,
+                                child: AnimatedLinearProgressBar(
+                                  progress: pct,
                                   minHeight: 5,
                                   backgroundColor: isDark
                                       ? const Color(0xFF1E293B)
                                       : const Color(0xFFF1F5F9),
-                                  valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                        AppColors.accent,
-                                      ),
+                                  valueColor: AppColors.accent,
                                 ),
                               ),
                             ],

@@ -85,7 +85,6 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
         totalSpent: budgetProgress?.totalSpent ?? 0.0,
         upcomingSubscriptions: upcomingSubs,
         categoryProgresses: categoryProgress,
-        apiKey: preferences.geminiApiKey,
       );
 
       if (mounted) {
@@ -154,7 +153,6 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
         totalSpent: budgetProgress?.totalSpent ?? 0.0,
         upcomingSubscriptions: upcomingSubs,
         categoryProgresses: categoryProgress,
-        apiKey: preferences.geminiApiKey,
       );
 
       if (mounted) {
@@ -234,9 +232,7 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
                       style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      ref.watch(preferencesProvider).geminiApiKey.isNotEmpty
-                          ? 'Gemini 1.5 Active'
-                          : 'Counsel Demo Mode',
+                      'Offline Local Engine',
                       style: AppTextStyles.caption.copyWith(color: Colors.purpleAccent),
                     ),
                   ],

@@ -449,23 +449,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-            VSpace.lg,
-            _buildSectionHeader('AI Financial Counsel'),
-            Card(
-              child: Column(
-                children: [
-                  _SettingsTile(
-                    icon: Icons.psychology_rounded,
-                    title: 'Gemini API Key',
-                    subtitle: preferences.geminiApiKey.isNotEmpty
-                        ? 'Configured (Active)'
-                        : 'Not set (Demo mode active)',
-                    onTap: () => _showGeminiApiKeyDialog(context),
-                  ),
-                ],
-              ),
-            ),
-            VSpace.lg,
             _buildSectionHeader('Data Management'),
             Card(
               child: Column(
@@ -861,71 +844,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showGeminiApiKeyDialog(BuildContext context) {
-    final preferences = ref.read(preferencesProvider);
-    final controller = TextEditingController(text: preferences.geminiApiKey);
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return AlertDialog(
-          title: const Text('Gemini API Key'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Enter your Gemini API key from Google AI Studio. This key is stored securely on your device.',
-                style: TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                obscureText: true,
-                style: AppTextStyles.body,
-                decoration: const InputDecoration(
-                  labelText: 'API Key',
-                  border: OutlineInputBorder(),
-                  hintText: 'AIzaSy...',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                ref.read(preferencesProvider.notifier).updateGeminiApiKey('');
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gemini API Key removed. Running in Demo mode.')),
-                );
-              },
-              child: const Text('Clear', style: TextStyle(color: Colors.red)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final key = controller.text.trim();
-                ref.read(preferencesProvider.notifier).updateGeminiApiKey(key);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(key.isNotEmpty
-                        ? 'Gemini API Key saved successfully!'
-                        : 'Gemini API Key cleared. Running in Demo mode.'),
-                  ),
-                );
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+
 
   void _confirmDisableEncryption(BuildContext context, String userId) {
     showDialog(

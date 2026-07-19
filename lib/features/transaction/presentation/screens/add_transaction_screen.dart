@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../commons/widgets/bouncy_button.dart';
 import '../../../../commons/widgets/app_text_field.dart';
-import '../../../../commons/widgets/primary_button.dart';
 import '../../../../core/enums/transaction_category.dart';
 import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -39,11 +40,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   late TransactionCategory _selectedCategory;
   late DateTime _selectedDate;
   late bool _isSplit;
-  late final TextEditingController _splitWithController;
-  late double _splitPercentage;
+  late List<String> _splitFriends;
   late bool _isSplitPaid;
+  bool _isAddingFriend = false;
+  final TextEditingController _newFriendController = TextEditingController();
 
   bool get _isEditMode => widget.transaction != null;
+
+  String _formatAmount(double val) {
+    return NumberFormat('#,##0', 'en_US').format(val.abs());
+  }
 
   @override
   void initState() {
@@ -59,8 +65,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         (_selectedType == TransactionType.income ? TransactionCategory.salary : TransactionCategory.food);
     _selectedDate = tx?.transactionDate ?? DateTime.now();
     _isSplit = tx?.isSplit ?? false;
-    _splitWithController = TextEditingController(text: tx?.splitWith ?? '');
-    _splitPercentage = tx?.splitPercentage ?? 50.0;
+    
+    // Parse list of friends from splitWith comma-separated string
+    if (tx?.splitWith != null && tx!.splitWith!.trim().isNotEmpty) {
+      _splitFriends = tx.splitWith!.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    } else {
+      _splitFriends = ['Aakash Kumar', 'Priya Sharma'];
+    }
     _isSplitPaid = tx?.isSplitPaid ?? false;
   }
 
@@ -68,7 +79,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
-    _splitWithController.dispose();
+    _newFriendController.dispose();
     super.dispose();
   }
 
@@ -85,11 +96,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       case TransactionCategory.food:
         return Icons.restaurant_rounded;
       case TransactionCategory.shopping:
-        return Icons.shopping_bag_rounded;
+        return Icons.shopping_cart_rounded;
       case TransactionCategory.travel:
-        return Icons.directions_car_rounded;
+        return Icons.flight_takeoff_rounded;
       case TransactionCategory.bills:
-        return Icons.receipt_long_rounded;
+        return Icons.home_rounded;
       case TransactionCategory.entertainment:
         return Icons.movie_creation_outlined;
       case TransactionCategory.health:
@@ -103,6 +114,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
+  List<String> _getSubcategories(TransactionCategory category) {
+    switch (category) {
+      case TransactionCategory.bills:
+        return ['Rent', 'Electricity', 'Water', 'Internet', 'Gas'];
+      case TransactionCategory.food:
+        return ['Groceries', 'Dine out', 'Delivery', 'Coffee'];
+      case TransactionCategory.travel:
+        return ['Fuel', 'Uber/Cab', 'Flights', 'Transit'];
+      case TransactionCategory.shopping:
+        return ['Clothes', 'Electronics', 'Home', 'Gifts'];
+      case TransactionCategory.salary:
+        return ['Primary', 'Bonus', 'Overtime'];
+      case TransactionCategory.freelance:
+        return ['Contract', 'Consulting', 'One-off'];
+      default:
+        return ['General', 'Utilities', 'Other'];
+    }
+  }
+
   void _presentDatePicker() async {
     final pickedDate = await showDatePicker(
       context: context,
@@ -112,9 +142,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: ColorScheme.dark(
               primary: AppColors.primary,
-              onPrimary: AppColors.white,
+              onPrimary: AppColors.background,
               surface: AppColors.surface,
               onSurface: AppColors.primaryText,
             ),
@@ -132,9 +162,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _saveTransaction() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final amount = double.tryParse(_amountController.text);
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount greater than 0')),
@@ -142,18 +170,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    if (_isSplit && _selectedType == TransactionType.expense) {
-      if (_splitWithController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please enter a friend's name to split the bill")),
-        );
-        return;
-      }
+    if (_noteController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please choose or type a subcategory note')),
+      );
+      return;
+    }
+
+    if (_isSplit && _selectedType == TransactionType.expense && _splitFriends.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one roommate to split with')),
+      );
+      return;
     }
 
     final notifier = ref.read(transactionControllerProvider.notifier);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+
+    // Compute split shares: percentage is (friends count / total splitters) * 100
+    final double splitPercentage = _isSplit && _selectedType == TransactionType.expense
+        ? (_splitFriends.length / (1.0 + _splitFriends.length)) * 100.0
+        : 50.0;
 
     try {
       if (_isEditMode) {
@@ -166,8 +204,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           date: _selectedDate,
           createdAt: widget.transaction!.createdAt,
           isSplit: _selectedType == TransactionType.expense ? _isSplit : false,
-          splitWith: _selectedType == TransactionType.expense && _isSplit ? _splitWithController.text.trim() : null,
-          splitPercentage: _selectedType == TransactionType.expense && _isSplit ? _splitPercentage : 50.0,
+          splitWith: _selectedType == TransactionType.expense && _isSplit ? _splitFriends.join(', ') : null,
+          splitPercentage: splitPercentage,
           isSplitPaid: _selectedType == TransactionType.expense && _isSplit ? _isSplitPaid : false,
         );
       } else {
@@ -178,8 +216,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           note: _noteController.text.trim(),
           date: _selectedDate,
           isSplit: _selectedType == TransactionType.expense ? _isSplit : false,
-          splitWith: _selectedType == TransactionType.expense && _isSplit ? _splitWithController.text.trim() : null,
-          splitPercentage: _selectedType == TransactionType.expense && _isSplit ? _splitPercentage : 50.0,
+          splitWith: _selectedType == TransactionType.expense && _isSplit ? _splitFriends.join(', ') : null,
+          splitPercentage: splitPercentage,
           isSplitPaid: _selectedType == TransactionType.expense && _isSplit ? _isSplitPaid : false,
         );
       }
@@ -201,12 +239,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete Transaction'),
-          content: const Text('Are you sure you want to delete this transaction?'),
+          backgroundColor: AppColors.surface,
+          title: Text('Delete Transaction', style: AppTextStyles.title),
+          content: Text('Are you sure you want to delete this transaction?', style: AppTextStyles.body),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('Cancel', style: TextStyle(color: AppColors.primary)),
             ),
             TextButton(
               onPressed: () async {
@@ -226,10 +265,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   );
                 }
               },
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: AppColors.expense),
-              ),
+              child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
             ),
           ],
         );
@@ -241,400 +277,570 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Widget build(BuildContext context) {
     final controllerState = ref.watch(transactionControllerProvider);
     final isLoading = controllerState.isLoading;
+    final currency = ref.watch(preferencesProvider).currency;
 
-    final preferences = ref.watch(preferencesProvider);
-    final currency = preferences.currency;
+    final double enteredAmount = double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
+    
+    // Split computations
+    final int totalSplitters = 1 + _splitFriends.length;
+    final double individualShare = enteredAmount / totalSplitters;
+    final double friendsOwe = enteredAmount - individualShare;
+
+    final subcategories = _getSubcategories(_selectedCategory);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditMode ? 'Edit Transaction' : 'Add Transaction'),
-        actions: [
-          if (_isEditMode)
-            IconButton(
-              icon: const Icon(Icons.delete_forever_rounded, color: AppColors.expense),
-              onPressed: isLoading ? null : _confirmDelete,
-            ),
-        ],
-      ),
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Form(
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Amount Display Container
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: AppRadius.large,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'AMOUNT',
-                        style: AppTextStyles.label.copyWith(letterSpacing: 1.5),
-                      ),
-                      VSpace.xs,
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            currency,
-                            style: AppTextStyles.display.copyWith(color: AppColors.primary),
-                          ),
-                          const SizedBox(width: 4),
-                          SizedBox(
-                            width: 200,
-                            child: TextFormField(
-                              controller: _amountController,
-                              autofocus: !_isEditMode,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.display,
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) {
-                                  return 'Enter amount';
-                                }
-                                if (double.tryParse(val) == null) {
-                                  return 'Enter valid number';
-                                }
-                                return null;
-                              },
-                              decoration: const InputDecoration(
-                                hintText: '0',
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                fillColor: Colors.transparent,
-                                filled: false,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                VSpace.xl,
-
-                // Transaction Type Toggle (Income / Expense)
+                // Top Custom Title Header
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedType = TransactionType.expense;
-                            if (_selectedCategory == TransactionCategory.salary ||
-                                _selectedCategory == TransactionCategory.freelance ||
-                                _selectedCategory == TransactionCategory.investment ||
-                                _selectedCategory == TransactionCategory.gift) {
-                              _selectedCategory = TransactionCategory.food;
-                            }
-                          });
-                        },
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: _selectedType == TransactionType.expense
-                                ? AppColors.expense.withValues(alpha: 0.12)
-                                : AppColors.surface,
-                            borderRadius: AppRadius.medium,
-                            border: Border.all(
-                              color: _selectedType == TransactionType.expense
-                                  ? AppColors.expense
-                                  : AppColors.border,
-                              width: _selectedType == TransactionType.expense ? 1.5 : 1.0,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Expense',
-                            style: AppTextStyles.button.copyWith(
-                              color: _selectedType == TransactionType.expense
-                                  ? AppColors.expense
-                                  : AppColors.secondaryText,
-                            ),
-                          ),
-                        ),
+                    Text(
+                      _isEditMode ? 'Edit transaction' : 'Add transaction',
+                      style: GoogleFonts.fraunces(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryText,
                       ),
                     ),
-                    HSpace.md,
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedType = TransactionType.income;
-                            if (_selectedCategory == TransactionCategory.food ||
-                                _selectedCategory == TransactionCategory.shopping ||
-                                _selectedCategory == TransactionCategory.travel ||
-                                _selectedCategory == TransactionCategory.bills ||
-                                _selectedCategory == TransactionCategory.entertainment ||
-                                _selectedCategory == TransactionCategory.health ||
-                                _selectedCategory == TransactionCategory.education) {
-                              _selectedCategory = TransactionCategory.salary;
-                            }
-                          });
-                        },
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: _selectedType == TransactionType.income
-                                ? AppColors.income.withValues(alpha: 0.12)
-                                : AppColors.surface,
-                            borderRadius: AppRadius.medium,
-                            border: Border.all(
-                              color: _selectedType == TransactionType.income
-                                  ? AppColors.income
-                                  : AppColors.border,
-                              width: _selectedType == TransactionType.income ? 1.5 : 1.0,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Income',
-                            style: AppTextStyles.button.copyWith(
-                              color: _selectedType == TransactionType.income
-                                  ? AppColors.income
-                                  : AppColors.secondaryText,
-                            ),
-                          ),
+                    BouncyButton(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.border, width: 1.0),
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: AppColors.primaryText,
                         ),
                       ),
                     ),
                   ],
                 ),
-                VSpace.xl,
+                const SizedBox(height: 20),
 
-                // Category Selection Section
-                Text(
-                  'CATEGORY',
-                  style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-                ),
-                VSpace.md,
+                // Expense / Income Toggle Row
                 Container(
-                  height: 200,
+                  height: 44,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: AppRadius.large,
-                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 0.5),
                   ),
-                  child: Builder(
-                    builder: (context) {
-                      final categories = TransactionCategory.values.where((cat) {
-                        if (_selectedType == TransactionType.income) {
-                          return cat == TransactionCategory.salary ||
-                              cat == TransactionCategory.freelance ||
-                              cat == TransactionCategory.investment ||
-                              cat == TransactionCategory.gift ||
-                              cat == TransactionCategory.transfer ||
-                              cat == TransactionCategory.other;
-                        } else {
-                          return cat == TransactionCategory.food ||
-                              cat == TransactionCategory.shopping ||
-                              cat == TransactionCategory.travel ||
-                              cat == TransactionCategory.bills ||
-                              cat == TransactionCategory.entertainment ||
-                              cat == TransactionCategory.health ||
-                              cat == TransactionCategory.education ||
-                              cat == TransactionCategory.transfer ||
-                              cat == TransactionCategory.other;
-                        }
-                      }).toList();
-
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 1.0,
-                        ),
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final isSelected = _selectedCategory == category;
-
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                _selectedCategory = category;
-                              });
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.accent.withValues(alpha: 0.15)
-                                    : Colors.transparent,
-                                borderRadius: AppRadius.medium,
-                                border: Border.all(
-                                  color: isSelected ? AppColors.accent : Colors.transparent,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    _getCategoryIcon(category),
-                                    color: isSelected ? AppColors.accent : AppColors.secondaryText,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    category.name[0].toUpperCase() + category.name.substring(1),
-                                    style: AppTextStyles.label.copyWith(
-                                      fontSize: 10,
-                                      color: isSelected ? AppColors.primaryText : AppColors.secondaryText,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedType = TransactionType.expense),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _selectedType == TransactionType.expense ? AppColors.expense : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Expense',
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _selectedType == TransactionType.expense ? AppColors.primaryText : AppColors.secondaryText,
+                                fontSize: 13,
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedType = TransactionType.income),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _selectedType == TransactionType.income ? AppColors.primary : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Income',
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _selectedType == TransactionType.income ? AppColors.background : AppColors.primaryText,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Centered large gold Amount field
+                Center(
+                  child: SizedBox(
+                    width: 260,
+                    child: TextField(
+                      controller: _amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.fraunces(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                      decoration: InputDecoration(
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Text(
+                            currency,
+                            style: GoogleFonts.fraunces(
+                              fontSize: 32,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                        border: InputBorder.none,
+                        hintText: '0',
+                        hintStyle: GoogleFonts.fraunces(
+                          fontSize: 48,
+                          color: AppColors.primary.withOpacity(0.3),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onChanged: (val) {
+                        setState(() {}); // refresh calculation displays
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // CATEGORY Header & List
+                Text(
+                  'CATEGORY',
+                  style: AppTextStyles.label.copyWith(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.disabledText,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                
+                // Horizontal category cards list
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: TransactionCategory.values.where((cat) {
+                      if (_selectedType == TransactionType.income) {
+                        return cat == TransactionCategory.salary ||
+                            cat == TransactionCategory.freelance ||
+                            cat == TransactionCategory.investment ||
+                            cat == TransactionCategory.gift ||
+                            cat == TransactionCategory.transfer ||
+                            cat == TransactionCategory.other;
+                      } else {
+                        return cat == TransactionCategory.food ||
+                            cat == TransactionCategory.shopping ||
+                            cat == TransactionCategory.travel ||
+                            cat == TransactionCategory.bills ||
+                            cat == TransactionCategory.entertainment ||
+                            cat == TransactionCategory.health ||
+                            cat == TransactionCategory.education ||
+                            cat == TransactionCategory.transfer ||
+                            cat == TransactionCategory.other;
+                      }
+                    }).map((cat) {
+                      final isSelected = _selectedCategory == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = cat;
+                              _noteController.clear();
+                            });
+                          },
+                          child: Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primary : AppColors.border,
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _getCategoryIcon(cat),
+                                  color: isSelected ? AppColors.primary : AppColors.secondaryText,
+                                  size: 20,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  cat.name[0].toUpperCase() + cat.name.substring(1),
+                                  style: AppTextStyles.label.copyWith(
+                                    fontSize: 9.5,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? AppColors.primaryText : AppColors.disabledText,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       );
-                    }
+                    }).toList(),
                   ),
                 ),
-                VSpace.xl,
+                const SizedBox(height: 24),
 
-                // Date Picker Picker Tile
-                Text(
-                  'DATE',
-                  style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-                ),
-                VSpace.md,
-                ListTile(
-                  tileColor: AppColors.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.medium,
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  leading: const Icon(Icons.calendar_today_rounded, color: AppColors.primary),
-                  title: Text(
-                    DateFormat('dd MMMM yyyy').format(_selectedDate),
-                    style: AppTextStyles.body,
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                // Date selector Card
+                GestureDetector(
                   onTap: _presentDatePicker,
-                ),
-                VSpace.xl,
-
-                // Subcategory Field
-                Text(
-                  'SUBCATEGORY',
-                  style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
-                ),
-                VSpace.md,
-                AppTextField(
-                  controller: _noteController,
-                  label: 'e.g. Swiggy, Coffee, Rent',
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter a subcategory (e.g. Swiggy, Coffee)';
-                    }
-                    return null;
-                  },
-                ),
-
-                // Split Bill Section (only for expense)
-                if (_selectedType == TransactionType.expense) ...[
-                  VSpace.xl,
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: AppRadius.medium,
-                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border, width: 1.0),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.splitscreen_rounded, color: AppColors.primary, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Split this bill',
-                              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                        Text(
+                          'Date',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.disabledText,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        Switch.adaptive(
-                          value: _isSplit,
-                          activeColor: AppColors.accent,
-                          onChanged: (val) {
-                            setState(() {
-                              _isSplit = val;
-                            });
-                          },
+                        Text(
+                          DateFormat('dd MMM yyyy').format(_selectedDate),
+                          style: AppTextStyles.mono.copyWith(
+                            fontSize: 13,
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                   ),
+                ),
+                const SizedBox(height: 24),
+
+                // SUBCATEGORY Chips
+                Text(
+                  'SUBCATEGORY',
+                  style: AppTextStyles.label.copyWith(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.disabledText,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Horizontal chips layout
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: subcategories.map((sub) {
+                      final isSelected = _noteController.text.trim().toLowerCase() == sub.toLowerCase();
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            sub,
+                            style: AppTextStyles.label.copyWith(
+                              fontSize: 11,
+                              color: isSelected ? AppColors.background : AppColors.primaryText,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: AppColors.primary,
+                          backgroundColor: AppColors.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.primary : AppColors.border,
+                              width: 1.0,
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _noteController.text = sub;
+                              });
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Custom Note / Subcategory Text Field
+                AppTextField(
+                  controller: _noteController,
+                  label: 'Or type custom subcategory/note',
+                  prefixIcon: const Icon(Icons.edit_note_rounded, size: 20),
+                ),
+                const SizedBox(height: 24),
+
+                // SPLIT expense toggle (Only for expenses)
+                if (_selectedType == TransactionType.expense) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Split this expense',
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Divide the amount with roommates',
+                            style: AppTextStyles.caption.copyWith(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      Switch.adaptive(
+                        value: _isSplit,
+                        activeColor: AppColors.primary,
+                        onChanged: (val) {
+                          setState(() {
+                            _isSplit = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Split detailed panel card
                   if (_isSplit) ...[
-                    VSpace.md,
-                    AppTextField(
-                      controller: _splitWithController,
-                      label: "Friend's Name",
-                      prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary),
-                    ),
-                    VSpace.md,
                     Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: AppRadius.medium,
-                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.5), width: 1.2),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Friend's Share: ${_splitPercentage.toStringAsFixed(0)}%",
-                                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                          // 1. You Share row
+                          _buildSplitMemberRow('You', 'Y', individualShare, currency),
+                          const Divider(height: 16, color: AppColors.border),
+
+                          // 2. Friends split rows
+                          ..._splitFriends.map((friend) {
+                            return Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: Colors.transparent,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: AppColors.disabledText, width: 0.8),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              friend.isNotEmpty ? friend[0].toUpperCase() : 'F',
+                                              style: TextStyle(fontSize: 9, color: AppColors.disabledText, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          friend,
+                                          style: AppTextStyles.body.copyWith(fontSize: 13, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '$currency${_formatAmount(individualShare)}',
+                                          style: AppTextStyles.mono.copyWith(fontSize: 12),
+                                        ),
+                                        IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(Icons.remove_circle_outline, size: 16, color: AppColors.expense),
+                                          onPressed: () {
+                                            setState(() {
+                                              _splitFriends.remove(friend);
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16, color: AppColors.border),
+                              ],
+                            );
+                          }),
+
+                          // 3. Add Friend Inline Text Field
+                          if (_isAddingFriend)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _newFriendController,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Enter roommate name',
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                    onFieldSubmitted: (val) {
+                                      if (val.trim().isNotEmpty) {
+                                        setState(() {
+                                          _splitFriends.add(val.trim());
+                                          _newFriendController.clear();
+                                          _isAddingFriend = false;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.check, color: AppColors.income),
+                                  onPressed: () {
+                                    if (_newFriendController.text.trim().isNotEmpty) {
+                                      setState(() {
+                                        _splitFriends.add(_newFriendController.text.trim());
+                                        _newFriendController.clear();
+                                        _isAddingFriend = false;
+                                      });
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: AppColors.expense),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isAddingFriend = false;
+                                      _newFriendController.clear();
+                                    });
+                                  },
+                                ),
+                              ],
+                            )
+                          else
+                            Center(
+                              child: TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isAddingFriend = true;
+                                  });
+                                },
+                                child: Text(
+                                  '+ Add another friend',
+                                  style: AppTextStyles.label.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                              Text(
-                                "Your Share: ${(100 - _splitPercentage).toStringAsFixed(0)}%",
-                                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          const Divider(height: 16, color: AppColors.border, thickness: 1.0),
+                          const SizedBox(height: 8),
+
+                          // 4. Shares Summary Metrics columns
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$currency${_formatAmount(individualShare)}',
+                                      style: AppTextStyles.mono.copyWith(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'YOUR SHARE',
+                                      style: AppTextStyles.label.copyWith(fontSize: 8.5, color: AppColors.disabledText),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(height: 24, width: 0.5, color: AppColors.border),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$currency${_formatAmount(friendsOwe)}',
+                                      style: AppTextStyles.mono.copyWith(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'FRIENDS OWE',
+                                      style: AppTextStyles.label.copyWith(fontSize: 8.5, color: AppColors.disabledText),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
-                          ),
-                          Slider(
-                            value: _splitPercentage,
-                            min: 1,
-                            max: 99,
-                            divisions: 98,
-                            activeColor: AppColors.accent,
-                            inactiveColor: AppColors.border,
-                            label: '${_splitPercentage.toStringAsFixed(0)}%',
-                            onChanged: (val) {
-                              setState(() {
-                                _splitPercentage = val;
-                              });
-                            },
                           ),
                         ],
                       ),
                     ),
-                    if (_isEditMode) ...[
-                      VSpace.md,
+                    const SizedBox(height: 12),
+
+                    // Inline split paid option (Only in edit mode)
+                    if (_isEditMode)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: AppRadius.medium,
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.border),
                         ),
                         child: Row(
@@ -642,11 +848,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           children: [
                             Text(
                               "Mark as Repaid / Settled",
-                              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+                              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500, fontSize: 13),
                             ),
                             Checkbox(
                               value: _isSplitPaid,
-                              activeColor: AppColors.accent,
+                              activeColor: AppColors.primary,
                               onChanged: (val) {
                                 setState(() {
                                   _isSplitPaid = val ?? false;
@@ -656,22 +862,95 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           ],
                         ),
                       ),
-                    ],
                   ],
                 ],
-                VSpace.xxl,
+                const SizedBox(height: 32),
 
-                // Save Action Button
-                PrimaryButton(
-                  text: _isEditMode ? 'Save Changes' : 'Add Transaction',
-                  isLoading: isLoading,
-                  onPressed: isLoading ? null : _saveTransaction,
+                // Save button
+                BouncyButton(
+                  onTap: isLoading ? null : _saveTransaction,
+                  child: Container(
+                    height: 48,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _isEditMode ? 'Save changes' : 'Save transaction',
+                      style: AppTextStyles.button.copyWith(
+                        color: AppColors.background,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
+                
+                // Inline Delete Button (Only in edit mode)
+                if (_isEditMode) ...[
+                  const SizedBox(height: 14),
+                  BouncyButton(
+                    onTap: isLoading ? null : _confirmDelete,
+                    child: Container(
+                      height: 48,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.expense.withOpacity(0.5), width: 1.0),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Delete transaction',
+                        style: AppTextStyles.button.copyWith(
+                          color: AppColors.expense,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSplitMemberRow(String name, String initial, double amount, String currency) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.disabledText, width: 0.8),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: TextStyle(fontSize: 9, color: AppColors.disabledText, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              name,
+              style: AppTextStyles.body.copyWith(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        Text(
+          '$currency${_formatAmount(amount)}',
+          style: AppTextStyles.mono.copyWith(fontSize: 12),
+        ),
+      ],
     );
   }
 }

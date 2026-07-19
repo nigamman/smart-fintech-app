@@ -1,9 +1,5 @@
-import 'dart:convert';
-import 'dart:io';
-
 class GeminiService {
   /// Evaluates and generates a proactive financial nudge based on local ledger state.
-  /// Falls back to local heuristics if [apiKey] is empty or the API call fails.
   static Future<String> generateProactiveNudge({
     required double safeToSpend,
     required double totalBalance,
@@ -11,28 +7,8 @@ class GeminiService {
     required double totalSpent,
     required List<Map<String, dynamic>> upcomingSubscriptions,
     required List<Map<String, dynamic>> categoryProgresses,
-    required String apiKey,
+    String apiKey = '',
   }) async {
-    final hasKey = apiKey.trim().isNotEmpty;
-    
-    // Construct the context prompt for Gemini
-    final prompt = _buildNudgePrompt(
-      safeToSpend: safeToSpend,
-      totalBalance: totalBalance,
-      totalLimit: totalLimit,
-      totalSpent: totalSpent,
-      upcomingSubscriptions: upcomingSubscriptions,
-      categoryProgresses: categoryProgresses,
-    );
-
-    if (hasKey) {
-      try {
-        return await _callGeminiApi(prompt: prompt, apiKey: apiKey);
-      } catch (_) {
-        // Fallback to local heuristic on API failure
-      }
-    }
-
     return _generateLocalHeuristicNudge(
       safeToSpend: safeToSpend,
       totalLimit: totalLimit,
@@ -43,7 +19,6 @@ class GeminiService {
   }
 
   /// Calculates affordability advice for a specific purchase query.
-  /// Falls back to local heuristics if [apiKey] is empty or the API call fails.
   static Future<String> getAffordabilityAdvice({
     required String query,
     required double safeToSpend,
@@ -52,28 +27,8 @@ class GeminiService {
     required double totalSpent,
     required List<Map<String, dynamic>> upcomingSubscriptions,
     required List<Map<String, dynamic>> categoryProgresses,
-    required String apiKey,
+    String apiKey = '',
   }) async {
-    final hasKey = apiKey.trim().isNotEmpty;
-    
-    final prompt = _buildAffordabilityPrompt(
-      query: query,
-      safeToSpend: safeToSpend,
-      totalBalance: totalBalance,
-      totalLimit: totalLimit,
-      totalSpent: totalSpent,
-      upcomingSubscriptions: upcomingSubscriptions,
-      categoryProgresses: categoryProgresses,
-    );
-
-    if (hasKey) {
-      try {
-        return await _callGeminiApi(prompt: prompt, apiKey: apiKey);
-      } catch (_) {
-        // Fallback to local heuristic on API failure
-      }
-    }
-
     return _generateLocalHeuristicAffordability(
       query: query,
       safeToSpend: safeToSpend,
@@ -82,96 +37,6 @@ class GeminiService {
       totalSpent: totalSpent,
       categoryProgresses: categoryProgresses,
     );
-  }
-
-  static Future<String> _callGeminiApi({
-    required String prompt,
-    required String apiKey,
-  }) async {
-    final client = HttpClient();
-    try {
-      final uri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey',
-      );
-      final request = await client.postUrl(uri);
-      request.headers.contentType = ContentType.json;
-      
-      final body = json.encode({
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt}
-            ]
-          }
-        ]
-      });
-      request.write(body);
-      
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        final jsonResponse = json.decode(responseBody);
-        
-        final candidates = jsonResponse['candidates'] as List;
-        if (candidates.isNotEmpty) {
-          final content = candidates[0]['content'];
-          final parts = content['parts'] as List;
-          if (parts.isNotEmpty) {
-            return (parts[0]['text'] as String).trim();
-          }
-        }
-      }
-      throw Exception('Gemini API Error: Status Code ${response.statusCode}');
-    } finally {
-      client.close();
-    }
-  }
-
-  static String _buildNudgePrompt({
-    required double safeToSpend,
-    required double totalBalance,
-    required double totalLimit,
-    required double totalSpent,
-    required List<Map<String, dynamic>> upcomingSubscriptions,
-    required List<Map<String, dynamic>> categoryProgresses,
-  }) {
-    return '''
-You are an intelligent, friendly AI financial counselor. Give the user a proactive, warm, and actionable "nudge" or advice based on their current monthly financial metrics. Keep the response exactly 1 to 2 sentences. Do not use bullet points, list format, or markdown headers.
-
-Current Context:
-- Safe to Spend Today: ₹${safeToSpend.toStringAsFixed(0)}
-- Current Cash Balance: ₹${totalBalance.toStringAsFixed(0)}
-- Monthly Budget: ₹${totalSpent.toStringAsFixed(0)} spent of ₹${totalLimit.toStringAsFixed(0)} limit
-- Upcoming renewals next week: ${upcomingSubscriptions.map((s) => '${s['name']} (₹${s['amount']})').join(', ')}
-- Budget progress by category: ${categoryProgresses.map((c) => '${c['category']}: ₹${c['spent']}/₹${c['limit']}').join(', ')}
-
-Provide a smart, conversational nudge. For example, highlight if they have renewals coming up and which budget categories are close to being exceeded, then suggest a smart spending correction.
-''';
-  }
-
-  static String _buildAffordabilityPrompt({
-    required String query,
-    required double safeToSpend,
-    required double totalBalance,
-    required double totalLimit,
-    required double totalSpent,
-    required List<Map<String, dynamic>> upcomingSubscriptions,
-    required List<Map<String, dynamic>> categoryProgresses,
-  }) {
-    return '''
-You are an intelligent, friendly AI financial counselor. The user is asking whether they can afford a purchase. Analyze their current monthly financial metrics and reply with a calculated Yes/No/Yes-if advice. Keep the response concise (2 to 3 sentences max). Answer directly.
-
-User Query: "$query"
-
-Current Context:
-- Safe to Spend Today: ₹${safeToSpend.toStringAsFixed(0)}
-- Current Cash Balance: ₹${totalBalance.toStringAsFixed(0)}
-- Monthly Budget: ₹${totalSpent.toStringAsFixed(0)} spent of ₹${totalLimit.toStringAsFixed(0)} limit
-- Upcoming renewals next week: ${upcomingSubscriptions.map((s) => '${s['name']} (₹${s['amount']})').join(', ')}
-- Budget progress by category: ${categoryProgresses.map((c) => '${c['category']}: ₹${c['spent']}/₹${c['limit']}').join(', ')}
-
-Compute whether the cash balance is sufficient, and if the purchase exceeds their daily Safe-to-Spend or category limits. Offer a clear recommendation (Yes, No, or Yes-if under certain conditions).
-''';
   }
 
   static String _generateLocalHeuristicNudge({
@@ -225,16 +90,57 @@ Compute whether the cash balance is sufficient, and if the purchase exceeds thei
     required double totalSpent,
     required List<Map<String, dynamic>> categoryProgresses,
   }) {
-    // Parse cost from query (extract numbers, e.g. "Can I afford ₹3,000 dinner?")
+    final lowerQuery = query.toLowerCase().trim();
+
+    // 1. Parse amount from query
     final regExp = RegExp(r'\d[\d,]*');
     final match = regExp.firstMatch(query.replaceAll(',', ''));
-    if (match == null) {
-      return "I couldn't quite catch the price in your question. Please specify an amount, like: 'Can I afford a ₹3,000 dinner?'";
+    final cost = match != null ? (double.tryParse(match.group(0) ?? '') ?? 0.0) : 0.0;
+
+    // 2. Detect Greetings
+    final isGreeting = lowerQuery == 'hi' ||
+        lowerQuery == 'hello' ||
+        lowerQuery == 'hey' ||
+        lowerQuery.startsWith('hi ') ||
+        lowerQuery.startsWith('hello ') ||
+        lowerQuery.startsWith('hey ');
+
+    if (isGreeting) {
+      return "Hello! I am your AI Financial Counsel. How can I help you with your budget today? Feel free to ask about your status or check if you can afford a specific purchase!";
     }
 
-    final cost = double.tryParse(match.group(0) ?? '') ?? 0.0;
+    // 3. Detect Income / Addition Intent
+    final isIncomeIntent = lowerQuery.contains('income') ||
+        lowerQuery.contains('earn') ||
+        lowerQuery.contains('add') ||
+        lowerQuery.contains('salary') ||
+        lowerQuery.contains('receive') ||
+        lowerQuery.contains('deposit') ||
+        lowerQuery.contains('bonus') ||
+        lowerQuery.contains('plus');
+
+    if (isIncomeIntent && cost > 0) {
+      final newBalance = totalBalance + cost;
+      return "Yes! Adding ₹${cost.toStringAsFixed(0)} as income is a great decision. It will increase your total cash balance from ₹${totalBalance.toStringAsFixed(0)} to ₹${newBalance.toStringAsFixed(0)}, which automatically increases your daily Safe-To-Spend threshold and improves your Financial Health Score!";
+    }
+
+    // 4. Detect Budget Status query
+    final isStatusIntent = lowerQuery.contains('how is') ||
+        lowerQuery.contains('status') ||
+        lowerQuery.contains('summary') ||
+        lowerQuery.contains('report') ||
+        lowerQuery.contains('budget progress');
+
+    if (isStatusIntent) {
+      final budgetText = totalLimit > 0
+          ? "You have spent ₹${totalSpent.toStringAsFixed(0)} out of your ₹${totalLimit.toStringAsFixed(0)} limit."
+          : "You haven't set up a monthly budget limits yet.";
+      return "Here is your current status: Your daily Safe-to-Spend is ₹${safeToSpend.toStringAsFixed(0)}, and your current cash balance is ₹${totalBalance.toStringAsFixed(0)}. $budgetText Keep track of daily expenses to maintain positive savings velocity.";
+    }
+
+    // 5. Default to Affordability (Expense/Spending) Check
     if (cost <= 0) {
-      return "Please enter a valid amount to evaluate.";
+      return "I couldn't detect a specific amount in your request. Try asking something like: 'Can I afford a ₹3,000 dinner tonight?' or 'How is my budget looking?'";
     }
 
     if (cost > totalBalance) {

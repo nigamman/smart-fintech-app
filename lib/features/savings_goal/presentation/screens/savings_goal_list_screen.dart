@@ -12,6 +12,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/savings_goal.dart';
 import '../providers/savings_goal_providers.dart';
 import '../../../../commons/widgets/skeleton_loader.dart';
+import '../../../../commons/widgets/animated_linear_progress_bar.dart';
 
 class SavingsGoalListScreen extends ConsumerWidget {
   const SavingsGoalListScreen({super.key});
@@ -269,10 +270,10 @@ class SavingsGoalListScreen extends ConsumerWidget {
                           // Progress Bar
                           ClipRRect(
                             borderRadius: AppRadius.small,
-                            child: LinearProgressIndicator(
-                              value: pct > 1.0 ? 1.0 : pct,
+                            child: AnimatedLinearProgressBar(
+                              progress: pct,
                               backgroundColor: AppColors.border,
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              valueColor: AppColors.primary,
                               minHeight: 8,
                             ),
                           ),

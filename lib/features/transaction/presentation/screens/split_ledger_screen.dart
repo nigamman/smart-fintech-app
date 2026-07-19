@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../commons/widgets/bouncy_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -16,7 +18,8 @@ import '../providers/transaction_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 
 class SplitLedgerScreen extends ConsumerStatefulWidget {
-  const SplitLedgerScreen({super.key});
+  final bool isEmbedded;
+  const SplitLedgerScreen({super.key, this.isEmbedded = false});
 
   @override
   ConsumerState<SplitLedgerScreen> createState() => _SplitLedgerScreenState();
@@ -272,246 +275,256 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     );
   }
 
+  String _formatAmount(double val) {
+    return NumberFormat('#,##0', 'en_US').format(val.abs());
+  }
+
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
     final currency = ref.watch(preferencesProvider).currency;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final bodyContent = transactionsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
+      data: (transactions) {
+        final splitTransactions = transactions.where((tx) => tx.isSplit).toList();
+
+        if (splitTransactions.isEmpty) {
+          return const EmptyState(
+            title: 'No Split Bills',
+            subtitle: 'Add an expense and toggle "Split this bill" to get started.',
+            icon: Icons.splitscreen_rounded,
+          );
+        }
+
+        // Grouping by friend
+        final Map<String, List<Transaction>> friendsLedger = {};
+        for (final tx in splitTransactions) {
+          final friend = tx.splitWith ?? 'Unknown Friend';
+          if (!friendsLedger.containsKey(friend)) {
+            friendsLedger[friend] = [];
+          }
+          friendsLedger[friend]!.add(tx);
+        }
+
+        // Calculate outstanding amounts per friend
+        final List<Map<String, dynamic>> friendBalances = [];
+        double othersOweYou = 0.0;
+
+        friendsLedger.forEach((friend, txList) {
+          double outstanding = 0.0;
+          for (final tx in txList) {
+            if (!tx.isSplitPaid) {
+              final share = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
+              if (tx.type == TransactionType.expense) {
+                outstanding += share;
+              } else {
+                outstanding -= share;
+              }
+            }
+          }
+          if (outstanding > 0) {
+            othersOweYou += outstanding;
+          }
+          friendBalances.add({
+            'name': friend,
+            'transactions': txList,
+            'outstanding': outstanding,
+          });
+        });
+
+        // Sort friend balances by outstanding amount (highest first)
+        friendBalances.sort((a, b) => b['outstanding'].compareTo(a['outstanding']));
+
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Summary card (Others owe you only)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Others owe you',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.primaryText,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '$currency${_formatAmount(othersOweYou)}',
+                      style: AppTextStyles.mono.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Title "ROOMMATES" (expressive serif)
+              Text(
+                'FRIENDS',
+                style: GoogleFonts.fraunces(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.disabledText,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Roommates list container card
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: friendBalances.map<Widget>((item) {
+                    final name = item['name'] as String;
+                    final outstanding = item['outstanding'] as double;
+                    final txList = item['transactions'] as List<Transaction>;
+
+                    final isOwed = outstanding > 0;
+                    final isOwes = outstanding < 0;
+                    final String statusText = isOwed
+                        ? 'Owes you'
+                        : (isOwes ? 'You owe' : 'Settled');
+                    final Color statusColor = isOwed
+                        ? AppColors.income
+                        : (isOwes ? AppColors.expense : AppColors.disabledText);
+
+                    final prefix = isOwed ? '+' : (isOwes ? '-' : '');
+                    final amountText = '$prefix$currency${_formatAmount(outstanding)}';
+
+                    return Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              // Avatar circle with outline
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.transparent,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.primary, width: 1.0),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
+                              // Name & Status Subtitle
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: AppTextStyles.body.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      statusText,
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 11,
+                                        color: statusColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Amount (tabulated monospace)
+                              Text(
+                                amountText,
+                                style: AppTextStyles.mono.copyWith(
+                                  fontSize: 14.5,
+                                  color: outstanding > 0
+                                      ? AppColors.income
+                                      : (outstanding < 0 ? AppColors.expense : AppColors.disabledText),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
+                              // Settle outlined button
+                              BouncyButton(
+                                onTap: () => _settleAllWithFriend(txList, name),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.primary, width: 1.0),
+                                  ),
+                                  child: Text(
+                                    'Settle',
+                                    style: AppTextStyles.label.copyWith(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (friendBalances.last != item)
+                          Container(
+                            height: 0.5,
+                            color: AppColors.border,
+                          ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Split Ledger'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.accent,
-          labelColor: AppColors.accent,
-          unselectedLabelColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-          tabs: const [
-            Tab(text: 'Balances'),
-            Tab(text: 'Split History'),
-          ],
-        ),
       ),
-      body: transactionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (transactions) {
-          final splitTransactions = transactions.where((tx) => tx.isSplit).toList();
-
-          if (splitTransactions.isEmpty) {
-            return const EmptyState(
-              title: 'No Split Bills',
-              subtitle: 'Add an expense and toggle "Split this bill" to get started.',
-              icon: Icons.splitscreen_rounded,
-            );
-          }
-
-          // Grouping by friend
-          final Map<String, List<Transaction>> friendsLedger = {};
-          for (final tx in splitTransactions) {
-            final friend = tx.splitWith ?? 'Unknown Friend';
-            if (!friendsLedger.containsKey(friend)) {
-              friendsLedger[friend] = [];
-            }
-            friendsLedger[friend]!.add(tx);
-          }
-
-          // Calculate outstanding amounts per friend
-          final List<Map<String, dynamic>> friendBalances = [];
-          double totalOwedToMe = 0.0;
-
-          friendsLedger.forEach((friend, txList) {
-            double outstanding = 0.0;
-            for (final tx in txList) {
-              if (!tx.isSplitPaid) {
-                final friendOwes = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
-                outstanding += friendOwes;
-              }
-            }
-            totalOwedToMe += outstanding;
-            friendBalances.add({
-              'name': friend,
-              'transactions': txList,
-              'outstanding': outstanding,
-            });
-          });
-
-          // Sort friend balances by outstanding amount (highest first)
-          friendBalances.sort((a, b) => b['outstanding'].compareTo(a['outstanding']));
-
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              // 1. BALANCES TAB
-              ListView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                children: [
-                  // Total Summary Header Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isDark
-                            ? [const Color(0xFF1E1B4B), const Color(0xFF311042)]
-                            : [const Color(0xFFEEF2FF), const Color(0xFFFAE8FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: AppRadius.large,
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF312E81) : const Color(0xFFC7D2FE),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'TOTAL OWED TO YOU',
-                          style: AppTextStyles.caption.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF4F46E5),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '$currency${totalOwedToMe.toStringAsFixed(0)}',
-                          style: AppTextStyles.h1.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF1E1B4B),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'From ${friendBalances.where((b) => b['outstanding'] > 0).length} friends',
-                          style: AppTextStyles.caption.copyWith(
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  VSpace.xl,
-                  Text(
-                    'FRIENDS',
-                    style: AppTextStyles.label.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white70 : AppColors.secondaryText,
-                    ),
-                  ),
-                  VSpace.md,
-                  if (friendBalances.isEmpty)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'No friends added to splits yet.',
-                          style: AppTextStyles.bodySecondary,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: friendBalances.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (ctx, i) {
-                        final item = friendBalances[i];
-                        final name = item['name'] as String;
-                        final outstanding = item['outstanding'] as double;
-                        final list = item['transactions'] as List<Transaction>;
-
-                        return InkWell(
-                          onTap: () => _showFriendDetailsSheet(context, name, list, outstanding, currency),
-                          borderRadius: AppRadius.medium,
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                              borderRadius: AppRadius.medium,
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                  child: Text(
-                                    name[0].toUpperCase(),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
-                                      ),
-                                      Text(
-                                        '${list.length} shared bill${list.length > 1 ? 's' : ''}',
-                                        style: AppTextStyles.caption,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      outstanding > 0 ? '$currency${outstanding.toStringAsFixed(0)}' : 'Settled',
-                                      style: AppTextStyles.body.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: outstanding > 0 ? AppColors.income : AppColors.secondaryText,
-                                      ),
-                                    ),
-                                    if (outstanding > 0)
-                                      Text(
-                                        'Owes you',
-                                        style: AppTextStyles.caption.copyWith(color: AppColors.income, fontSize: 10),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.secondaryText),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                ],
-              ),
-
-              // 2. SPLIT HISTORY TAB
-              ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                itemCount: splitTransactions.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (historyCtx, i) {
-                  final tx = splitTransactions[i];
-                  final friendOwes = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
-                  final label = '${tx.splitWith ?? "Someone"} owes';
-
-                  return TransactionTile(
-                    title: tx.note != null && tx.note!.isNotEmpty
-                        ? tx.note!
-                        : tx.category.name[0].toUpperCase() + tx.category.name.substring(1),
-                    category: '$label $currency${friendOwes.toStringAsFixed(0)}',
-                    amount: tx.amount,
-                    date: tx.transactionDate,
-                    type: tx.type,
-                  );
-                },
-              ),
-            ],
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: bodyContent,
       ),
     );
   }

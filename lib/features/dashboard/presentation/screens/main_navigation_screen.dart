@@ -29,9 +29,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     ActivityScreen(),
-    PlanningScreen(),
     InsightsScreen(),
-    SettingsScreen(),
+    PlanningScreen(),
   ];
 
   bool _isUnlockSheetOpen = false;
@@ -361,19 +360,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         index: selectedIndex,
         children: _screens,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showQuickActions(context),
-        backgroundColor: AppColors.accent,
-        foregroundColor: isDark ? const Color(0xFF020617) : Colors.white,
-        shape: const CircleBorder(),
-        elevation: 4,
-        child: const Icon(Icons.add_rounded, size: 30),
-      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+              color: AppColors.border,
               width: 0.5,
             ),
           ),
@@ -384,9 +375,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             ref.read(mainNavigationIndexProvider.notifier).state = index;
           },
           type: BottomNavigationBarType.fixed,
-          backgroundColor: isDark ? const Color(0xFF090D16) : Colors.white,
-          selectedItemColor: AppColors.accent,
-          unselectedItemColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+          backgroundColor: AppColors.surface,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.secondaryText.withOpacity(0.6),
           selectedLabelStyle: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, fontSize: 10),
           unselectedLabelStyle: AppTextStyles.caption.copyWith(fontSize: 10),
           elevation: 0,
@@ -397,24 +388,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long_rounded),
-              label: 'Activity',
+              icon: Icon(Icons.menu_book_outlined),
+              activeIcon: Icon(Icons.menu_book_rounded),
+              label: 'Ledger',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_wallet_outlined),
-              activeIcon: Icon(Icons.account_balance_wallet_rounded),
-              label: 'Planning',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_outlined),
-              activeIcon: Icon(Icons.analytics_rounded),
+              icon: Icon(Icons.donut_large_outlined),
+              activeIcon: Icon(Icons.donut_large_rounded),
               label: 'Insights',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings_rounded),
-              label: 'Settings',
+              icon: Icon(Icons.diamond_outlined),
+              activeIcon: Icon(Icons.diamond_rounded),
+              label: 'Vault',
             ),
           ],
         ),
