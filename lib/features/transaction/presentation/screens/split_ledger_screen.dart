@@ -16,6 +16,7 @@ import '../../../../core/enums/transaction_category.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/transaction_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
+import '../../../auth/presentation/widgets/premium_widgets.dart';
 
 class SplitLedgerScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
@@ -48,11 +49,15 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     final unpaid = friendTransactions.where((tx) => !tx.isSplitPaid).toList();
     if (unpaid.isEmpty) return;
 
+    final String capitalizedFriendName = friendName.isNotEmpty
+        ? friendName[0].toUpperCase() + friendName.substring(1)
+        : friendName;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Settle Balance with $friendName?'),
-        content: Text('Are you sure you want to mark all ${unpaid.length} pending splits with $friendName as repaid?'),
+        title: Text('Settle Balance with $capitalizedFriendName?'),
+        content: Text('Are you sure you want to mark all ${unpaid.length} pending splits with $capitalizedFriendName as repaid?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -96,12 +101,12 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
             amount: friendShare,
             type: TransactionType.income,
             category: TransactionCategory.other,
-            note: 'Repayment: $txName ($friendName)',
+            note: 'Repayment: $txName ($capitalizedFriendName)',
             date: DateTime.now(),
           );
         }
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('All balances settled with $friendName!')),
+          SnackBar(content: Text('All balances settled with $capitalizedFriendName!')),
         );
       } catch (e) {
         scaffoldMessenger.showSnackBar(
@@ -119,10 +124,14 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     String currency,
   ) {
     final isDark = Theme.of(parentContext).brightness == Brightness.dark;
+    final String capitalizedFriendName = friendName.isNotEmpty
+        ? friendName[0].toUpperCase() + friendName.substring(1)
+        : friendName;
 
     showModalBottomSheet(
       context: parentContext,
       isScrollControlled: true,
+      backgroundColor: Theme.of(parentContext).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -156,7 +165,7 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          friendName,
+                          capitalizedFriendName,
                           style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.bold),
                         ),
                         if (outstanding > 0)
@@ -179,7 +188,7 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                           ),
                       ],
                     ),
-                    VSpace.sm,
+                    const SizedBox(height: 8),
                     Text(
                       outstanding > 0
                           ? 'Owes you $currency${outstanding.toStringAsFixed(0)} in total'
@@ -189,14 +198,14 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    VSpace.lg,
+                    const SizedBox(height: 20),
                     const Divider(height: 1),
-                    VSpace.md,
+                    const SizedBox(height: 16),
                     Text(
                       'BILL DETAILS',
                       style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.0),
                     ),
-                    VSpace.md,
+                    const SizedBox(height: 16),
                     SizedBox(
                       height: 300,
                       child: ListView.separated(
@@ -283,7 +292,6 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
     final currency = ref.watch(preferencesProvider).currency;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bodyContent = transactionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -315,14 +323,17 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
 
         friendsLedger.forEach((friend, txList) {
           double outstanding = 0.0;
+          double settledAmount = 0.0;
           for (final tx in txList) {
+            final share = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
             if (!tx.isSplitPaid) {
-              final share = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
               if (tx.type == TransactionType.expense) {
                 outstanding += share;
               } else {
                 outstanding -= share;
               }
+            } else {
+              settledAmount += share;
             }
           }
           if (outstanding > 0) {
@@ -332,6 +343,7 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
             'name': friend,
             'transactions': txList,
             'outstanding': outstanding,
+            'settledAmount': settledAmount,
           });
         });
 
@@ -343,98 +355,127 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Summary card (Others owe you only)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border, width: 1.0),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Others owe you',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.primaryText,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      '$currency${_formatAmount(othersOweYou)}',
-                      style: AppTextStyles.mono.copyWith(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Title "ROOMMATES" (expressive serif)
-              Text(
-                'FRIENDS',
-                style: GoogleFonts.fraunces(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.disabledText,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Roommates list container card
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border, width: 1.0),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: friendBalances.map<Widget>((item) {
-                    final name = item['name'] as String;
-                    final outstanding = item['outstanding'] as double;
-                    final txList = item['transactions'] as List<Transaction>;
-
-                    final isOwed = outstanding > 0;
-                    final isOwes = outstanding < 0;
-                    final String statusText = isOwed
-                        ? 'Owes you'
-                        : (isOwes ? 'You owe' : 'Settled');
-                    final Color statusColor = isOwed
-                        ? AppColors.income
-                        : (isOwes ? AppColors.expense : AppColors.disabledText);
-
-                    final prefix = isOwed ? '+' : (isOwes ? '-' : '');
-                    final amountText = '$prefix$currency${_formatAmount(outstanding)}';
-
-                    return Column(
+              // Summary card (Others owe you only) - Delay 0ms
+              FadeInSlideUp(
+                delayMs: 0,
+                child: Card(
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+                  color: Theme.of(context).cardTheme.color,
+                  shape: Theme.of(context).cardTheme.shape,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.account_balance_wallet_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Others owe you',
+                              style: AppTextStyles.body.copyWith(
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '$currency${_formatAmount(othersOweYou)}',
+                          style: AppTextStyles.mono.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Title "FRIENDS" - Delay 100ms
+              FadeInSlideUp(
+                delayMs: 100,
+                child: Text(
+                  'FRIENDS',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6) ?? AppColors.disabledText,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Friends list items with staggered delays
+              ...friendBalances.asMap().entries.map<Widget>((entry) {
+                final int idx = entry.key;
+                final item = entry.value;
+                final name = item['name'] as String;
+                final outstanding = item['outstanding'] as double;
+                final settledAmount = item['settledAmount'] as double;
+                final txList = item['transactions'] as List<Transaction>;
+
+                final isOwed = outstanding > 0;
+                final isOwes = outstanding < 0;
+                final String statusText = isOwed
+                    ? 'Owes you'
+                    : (isOwes ? 'You owe' : 'Settled');
+                final Color statusColor = isOwed
+                    ? AppColors.income
+                    : (isOwes ? AppColors.expense : AppColors.secondaryText);
+
+                final prefix = isOwed ? '+' : (isOwes ? '-' : '');
+                final amountText = outstanding != 0
+                    ? '$prefix$currency${_formatAmount(outstanding)}'
+                    : '$currency${_formatAmount(settledAmount)}';
+                final String capitalizedName = name.isNotEmpty
+                    ? name[0].toUpperCase() + name.substring(1)
+                    : name;
+
+                return FadeInSlideUp(
+                  delayMs: 150 + (idx * 50),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Card(
+                      elevation: 0,
+                      margin: EdgeInsets.zero,
+                      color: Theme.of(context).cardTheme.color,
+                      shape: Theme.of(context).cardTheme.shape,
+                      child: InkWell(
+                        borderRadius: AppRadius.large,
+                        onTap: () => _showFriendDetailsSheet(context, name, txList, outstanding, currency),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           child: Row(
                             children: [
-                              // Avatar circle with outline
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.transparent,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.primary, width: 1.0),
+                              // Avatar circle with monogram and border
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary.withOpacity(0.08),
+                                  border: Border.all(
+                                    color: AppColors.primary.withOpacity(0.4),
+                                    width: 1.0,
                                   ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                      fontSize: 12,
-                                    ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                                  style: GoogleFonts.fraunces(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
@@ -446,17 +487,19 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      name,
+                                      capitalizedName,
                                       style: AppTextStyles.body.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                        fontSize: 15,
+                                        color: Theme.of(context).textTheme.bodyLarge?.color,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 4),
                                     Text(
                                       statusText,
                                       style: AppTextStyles.caption.copyWith(
-                                        fontSize: 11,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
                                         color: statusColor,
                                       ),
                                     ),
@@ -468,46 +511,53 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                               Text(
                                 amountText,
                                 style: AppTextStyles.mono.copyWith(
-                                  fontSize: 14.5,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
                                   color: outstanding > 0
                                       ? AppColors.income
-                                      : (outstanding < 0 ? AppColors.expense : AppColors.disabledText),
+                                      : (outstanding < 0 ? AppColors.expense : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5)),
                                 ),
                               ),
                               const SizedBox(width: 16),
 
-                              // Settle outlined button
-                              BouncyButton(
-                                onTap: () => _settleAllWithFriend(txList, name),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.primary, width: 1.0),
-                                  ),
-                                  child: Text(
-                                    'Settle',
-                                    style: AppTextStyles.label.copyWith(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
+                              // Settle button or check icon
+                              if (outstanding != 0)
+                                BouncyButton(
+                                  onTap: () => _settleAllWithFriend(txList, name),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: AppColors.primary, width: 1.0),
+                                      color: AppColors.primary.withOpacity(0.04),
+                                    ),
+                                    child: Text(
+                                      'Settle',
+                                      style: AppTextStyles.label.copyWith(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
                                   ),
+                                )
+                              else
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 8),
+                                  child: Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.income,
+                                    size: 24,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
-                        if (friendBalances.last != item)
-                          Container(
-                            height: 0.5,
-                            color: AppColors.border,
-                          ),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
         );

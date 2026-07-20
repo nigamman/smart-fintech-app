@@ -1,11 +1,13 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../commons/widgets/app_text_field.dart';
-import '../../../../commons/widgets/primary_button.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/auth_controller.dart';
+import '../widgets/premium_widgets.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -46,113 +48,300 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       state.whenOrNull(
         error: (error, _) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.toString())),
+            SnackBar(
+              content: Text(
+                error.toString(),
+                style: GoogleFonts.plusJakartaSans(color: Colors.white),
+              ),
+              backgroundColor: AppColors.expense,
+            ),
           );
         },
       );
     });
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 60),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xl,
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 20),
 
-                Text(
-                  'Welcome Back 👋',
-                  style: AppTextStyles.display,
-                ),
+                  // Logo (Animated breathing + entrance fader)
+                  const FadeInSlideUp(
+                    delayMs: 0,
+                    child: FinTrackLogo(),
+                  ),
 
-                const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: 32),
 
-                Text(
-                  'Sign in to continue managing your finances.',
-                  style: AppTextStyles.bodySecondary,
-                ),
-
-                const SizedBox(height: AppSpacing.xxl),
-
-                AppTextField(
-                  controller: _emailController,
-                  label: 'Email',
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                AppTextField(
-                  controller: _passwordController,
-                  label: 'Password',
-                  obscureText: _obscurePassword,
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+                  // Title (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 100,
+                    child: Text(
+                      'Welcome back',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.fraunces(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryText,
+                      ),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: 8),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      context.push('/forgot-password');
-                    },
-                    child: const Text('Forgot Password?'),
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                PrimaryButton(
-                  text: 'Login',
-                  isLoading: authState.isLoading,
-                  onPressed: _login,
-                ),
-
-                const SizedBox(height: AppSpacing.xl),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Don't have an account?",
-                      style: AppTextStyles.bodySecondary,
+                  // Subtitle (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 150,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Private, paced money — picked up where you left it',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.secondaryText,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        context.push('/signup');
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Email Field (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 250,
+                    child: PremiumTextField(
+                      controller: _emailController,
+                      label: 'Email',
+                      hintText: 'rishi@fintrack.app',
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        return null;
                       },
-                      child: const Text('Sign Up'),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Password Field (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 300,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        PremiumTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          hintText: '••••••••',
+                          obscureText: _obscurePassword,
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: AppColors.secondaryText,
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () {
+                              context.push('/forgot-password');
+                            },
+                            child: Text(
+                              'Forgot password?',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Login Button (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 350,
+                    child: BouncingButton(
+                      text: 'Log in',
+                      isLoading: authState.isLoading,
+                      onPressed: _login,
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Divider (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 400,
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Divider(
+                            color: AppColors.border,
+                            thickness: 1.0,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR CONTINUE WITH',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.disabledText,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
+                        const Expanded(
+                          child: Divider(
+                            color: AppColors.border,
+                            thickness: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Social Buttons (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 450,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: BouncingButton(
+                            text: '',
+                            backgroundColor: Colors.transparent,
+                            onPressed: () {
+                              // Google Login Action
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/icons/google_icon.png',
+                                  width: 20,
+                                  height: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Google',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: BouncingButton(
+                            text: '',
+                            backgroundColor: Colors.transparent,
+                            onPressed: () {
+                              // Facebook Login Action
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/icons/facebook_icon.png',
+                                  width: 20,
+                                  height: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Facebook',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Toggle Navigation Link (Entrance fader)
+                  FadeInSlideUp(
+                    delayMs: 500,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'New to FinTrack? ',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            context.push('/signup');
+                          },
+                          child: Text(
+                            'Create account',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),

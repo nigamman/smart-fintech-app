@@ -205,6 +205,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   void _showQuickActions(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.background,
       barrierColor: Colors.black.withOpacity(0.5),
       shape: const RoundedRectangleBorder(
@@ -214,86 +215,93 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(2),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Quick Actions',
-                  style: AppTextStyles.h3.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  const SizedBox(height: 24),
+                  Text(
+                    'Quick Actions',
+                    style: AppTextStyles.h3.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                _buildActionTile(
-                  context,
-                  icon: Icons.remove_circle_outline_rounded,
-                  color: AppColors.expense,
-                  title: 'Add Expense',
-                  subtitle: 'Record an outgoing payment or purchase',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/add-transaction?type=expense');
-                  },
-                ),
-                _buildActionTile(
-                  context,
-                  icon: Icons.add_circle_outline_rounded,
-                  color: AppColors.income,
-                  title: 'Add Income',
-                  subtitle: 'Log earnings, salary, or side income',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/add-transaction?type=income');
-                  },
-                ),
-                _buildActionTile(
-                  context,
-                  icon: Icons.track_changes_rounded,
-                  color: const Color(0xFFC8A05B),
-                  title: 'Create Goal',
-                  subtitle: 'Set and track targeted savings goals',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/add-savings-goal');
-                  },
-                ),
-                _buildActionTile(
-                  context,
-                  icon: Icons.calendar_today_rounded,
-                  color: Colors.blueAccent,
-                  title: 'Add Bill / Sub',
-                  subtitle: 'Log recurring bill cycles or subscriptions',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/add-subscription');
-                  },
-                ),
-                _buildActionTile(
-                  context,
-                  icon: Icons.splitscreen_rounded,
-                  color: Colors.deepPurpleAccent,
-                  title: 'Split Ledger',
-                  subtitle: 'Split bills and manage roommate balances',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/split-ledger');
-                  },
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  _buildActionTile(
+                    context,
+                    icon: Icons.remove_circle_outline_rounded,
+                    color: AppColors.expense,
+                    title: 'Add Expense',
+                    subtitle: 'Record an outgoing payment or purchase',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/add-transaction?type=expense');
+                    },
+                  ),
+                  _buildActionTile(
+                    context,
+                    icon: Icons.add_circle_outline_rounded,
+                    color: AppColors.income,
+                    title: 'Add Income',
+                    subtitle: 'Log earnings, salary, or side income',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/add-transaction?type=income');
+                    },
+                  ),
+                  _buildActionTile(
+                    context,
+                    icon: Icons.track_changes_rounded,
+                    color: const Color(0xFFC8A05B),
+                    title: 'Create Goal',
+                    subtitle: 'Set and track targeted savings goals',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/add-savings-goal');
+                    },
+                  ),
+                  _buildActionTile(
+                    context,
+                    icon: Icons.calendar_today_rounded,
+                    color: Colors.blueAccent,
+                    title: 'Add Bill / Sub',
+                    subtitle: 'Log recurring bill cycles or subscriptions',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/add-subscription');
+                    },
+                  ),
+                  _buildActionTile(
+                    context,
+                    icon: Icons.splitscreen_rounded,
+                    color: Colors.deepPurpleAccent,
+                    title: 'Split Ledger',
+                    subtitle: 'Split bills and manage roommate balances',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/split-ledger');
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -354,6 +362,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     });
 
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
  
     return Scaffold(
       body: IndexedStack(
@@ -361,7 +370,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         children: _screens,
       ),
       bottomNavigationBar: Container(
-        height: 64,
+        height: 64 + bottomPadding,
         decoration: BoxDecoration(
           color: AppColors.surface,
           border: Border(
@@ -371,40 +380,43 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             ),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
-            _buildNavItem(1, Icons.menu_book_outlined, Icons.menu_book_rounded, 'Ledger'),
-            
-            // Middle Quick Action Button
-            GestureDetector(
-              onTap: () => _showQuickActions(context),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.add_rounded,
-                  color: AppColors.background,
-                  size: 26,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
+              _buildNavItem(1, Icons.menu_book_outlined, Icons.menu_book_rounded, 'Ledger'),
+              
+              // Middle Quick Action Button
+              GestureDetector(
+                onTap: () => _showQuickActions(context),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: AppColors.background,
+                    size: 26,
+                  ),
                 ),
               ),
-            ),
 
-            _buildNavItem(2, Icons.donut_large_outlined, Icons.donut_large_rounded, 'Insights'),
-            _buildNavItem(3, Icons.diamond_outlined, Icons.diamond_rounded, 'Vault'),
-          ],
+              _buildNavItem(2, Icons.donut_large_outlined, Icons.donut_large_rounded, 'Insights'),
+              _buildNavItem(3, Icons.diamond_outlined, Icons.diamond_rounded, 'Vault'),
+            ],
+          ),
         ),
       ),
     );

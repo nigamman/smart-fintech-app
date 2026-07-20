@@ -871,10 +871,23 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   child: TextFormField(
                                     controller: _newFriendController,
                                     autofocus: true,
-                                    decoration: const InputDecoration(
+                                    textInputAction: TextInputAction.done,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    cursorColor: AppColors.primary,
+                                    decoration: InputDecoration(
                                       hintText: 'Enter roommate name',
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                      hintStyle: const TextStyle(color: AppColors.disabledText, fontSize: 12),
+                                      filled: true,
+                                      fillColor: AppColors.background,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(color: AppColors.border, width: 0.5),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: const BorderSide(color: AppColors.primary, width: 1.0),
+                                      ),
                                     ),
                                     onFieldSubmitted: (val) {
                                       if (val.trim().isNotEmpty) {
@@ -887,9 +900,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     },
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.check, color: AppColors.income),
-                                  onPressed: () {
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
                                     if (_newFriendController.text.trim().isNotEmpty) {
                                       setState(() {
                                         _splitFriends.add(_newFriendController.text.trim());
@@ -898,15 +912,23 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                       });
                                     }
                                   },
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                    child: Icon(Icons.check, color: AppColors.income, size: 20),
+                                  ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: AppColors.expense),
-                                  onPressed: () {
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
                                     setState(() {
                                       _isAddingFriend = false;
                                       _newFriendController.clear();
                                     });
                                   },
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                    child: Icon(Icons.close, color: AppColors.expense, size: 20),
+                                  ),
                                 ),
                               ],
                             )
