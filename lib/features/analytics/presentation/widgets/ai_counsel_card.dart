@@ -190,10 +190,10 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
     
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF131B2E) : Colors.white,
+        color: isDark ? AppColors.surface : Colors.white,
         borderRadius: AppRadius.large,
         border: Border.all(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          color: isDark ? AppColors.border : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
@@ -313,7 +313,7 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
                     hintText: 'Ask: Can I afford ₹2,000 shopping?',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    fillColor: isDark ? AppColors.border : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -348,7 +348,7 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
         margin: const EdgeInsets.only(right: 32),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          color: isDark ? AppColors.border : const Color(0xFFF1F5F9),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
@@ -415,7 +415,7 @@ class _AiCounselCardState extends ConsumerState<AiCounselCard> {
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+      backgroundColor: isDark ? AppColors.border : const Color(0xFFF1F5F9),
       onPressed: () => _askAffordability(query),
     );
   }

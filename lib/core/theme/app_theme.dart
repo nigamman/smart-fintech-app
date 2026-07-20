@@ -120,11 +120,11 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
-    const darkBg = Color(0xFF090D16);
-    const darkCard = Color(0xFF131B2E);
-    const darkBorder = Color(0xFF1E293B);
-    const darkPrimaryText = Color(0xFFF1F5F9);
-    const darkSecondaryText = Color(0xFF94A3B8);
+    const darkBg = AppColors.background;
+    const darkCard = AppColors.surface;
+    const darkBorder = AppColors.border;
+    const darkPrimaryText = AppColors.primaryText;
+    const darkSecondaryText = AppColors.secondaryText;
 
     return ThemeData(
       useMaterial3: true,
@@ -135,7 +135,7 @@ class AppTheme {
         seedColor: AppColors.accent,
         brightness: Brightness.dark,
         primary: AppColors.accent,
-        onPrimary: AppColors.primary,
+        onPrimary: AppColors.primaryDark,
         secondary: AppColors.accent,
         surface: darkCard,
         onSurface: darkPrimaryText,
@@ -159,7 +159,7 @@ class AppTheme {
         bodyLarge: AppTextStyles.body.copyWith(color: darkPrimaryText),
         bodyMedium: AppTextStyles.bodySecondary.copyWith(color: darkSecondaryText),
         bodySmall: AppTextStyles.caption.copyWith(color: darkSecondaryText),
-        labelLarge: AppTextStyles.button.copyWith(color: AppColors.primary),
+        labelLarge: AppTextStyles.button.copyWith(color: AppColors.primaryDark),
         labelMedium: AppTextStyles.label.copyWith(color: darkSecondaryText),
       ),
 
@@ -192,11 +192,11 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accent,
-          foregroundColor: AppColors.primary,
+          foregroundColor: AppColors.primaryDark,
           elevation: 0,
           minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.large),
-          textStyle: AppTextStyles.button.copyWith(color: AppColors.primary),
+          textStyle: AppTextStyles.button.copyWith(color: AppColors.primaryDark),
         ),
       ),
 

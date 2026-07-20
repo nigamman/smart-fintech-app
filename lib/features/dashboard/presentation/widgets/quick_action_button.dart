@@ -26,10 +26,10 @@ class QuickActionButton extends StatelessWidget {
         width: 72,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF131B2E) : Colors.white,
+          color: isDark ? AppColors.surface : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+            color: isDark ? AppColors.border : const Color(0xFFE2E8F0),
           ),
           boxShadow: [
             BoxShadow(
@@ -57,7 +57,7 @@ class QuickActionButton extends StatelessWidget {
               style: AppTextStyles.caption.copyWith(
                 fontWeight: FontWeight.bold,
                 fontSize: 10,
-                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF0F172A),
+                color: isDark ? AppColors.primaryText : const Color(0xFF0F172A),
               ),
               textAlign: TextAlign.center,
               maxLines: 1,

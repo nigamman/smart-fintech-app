@@ -43,8 +43,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void _initializeValues(dynamic user) {
     if (_initialized) return;
     _nameController.text = user.name;
-    _incomeController.text = user.monthlyIncome.toCommaFormat();
-    _savingsGoalController.text = user.monthlySavingsGoal.toCommaFormat();
+    _incomeController.text = (user.monthlyIncome as num).toCommaFormat();
+    _savingsGoalController.text = (user.monthlySavingsGoal as num).toCommaFormat();
     _initialized = true;
   }
 
@@ -222,6 +222,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           if (!_formKey.currentState!.validate()) return;
                           final incomeVal = double.parse(_incomeController.text.replaceAll(',', ''));
                           final savingsVal = double.parse(_savingsGoalController.text.replaceAll(',', ''));
+                          
+                          if (savingsVal >= incomeVal) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Savings goal must be less than monthly income')),
+                            );
+                            return;
+                          }
+
                           final messenger = ScaffoldMessenger.of(context);
                           
                           try {

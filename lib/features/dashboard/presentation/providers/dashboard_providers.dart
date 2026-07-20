@@ -47,6 +47,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
       totalBalance: 0.0,
       safeToSpend: 0.0,
       monthlyExpense: 0.0,
+      todayExpense: 0.0,
       recentTransactions: [],
     );
   }
@@ -54,6 +55,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
   double totalIncome = 0;
   double totalExpense = 0;
   double monthlyExpense = 0;
+  double todayExpense = 0;
   final now = DateTime.now();
 
   for (final transaction in transactions) {
@@ -70,9 +72,12 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
       totalExpense += expenseAmount;
 
       // Calculate current month's expenses only
-      final txDate = transaction.transactionDate;
+      final txDate = transaction.transactionDate.toLocal();
       if (txDate.year == now.year && txDate.month == now.month) {
         monthlyExpense += expenseAmount;
+        if (txDate.day == now.day) {
+          todayExpense += expenseAmount;
+        }
       }
     }
   }
@@ -83,8 +88,9 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
   final remainingDays = (lastDay - now.day) + 1;
   final daysDivider = remainingDays < 1 ? 1 : remainingDays;
 
-  // Safe to Spend = (Monthly Income - Monthly Savings Goal - Monthly Expenses) / Remaining Days
-  final safeToSpend = (user.monthlyIncome - user.monthlySavingsGoal - monthlyExpense) / daysDivider;
+  final monthlyExpenseExcludingToday = (monthlyExpense - todayExpense).clamp(0.0, double.infinity);
+  final dailyBudget = (user.monthlyIncome - user.monthlySavingsGoal - monthlyExpenseExcludingToday) / daysDivider;
+  final safeToSpend = dailyBudget - todayExpense;
 
   final data = DashboardData(
     userName: user.name,
@@ -95,6 +101,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
     totalBalance: totalBalance,
     safeToSpend: safeToSpend,
     monthlyExpense: monthlyExpense,
+    todayExpense: todayExpense,
     recentTransactions: transactions.take(5).cast<TransactionModel>().toList(),
   );
   

@@ -39,9 +39,9 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF131B2E) : Colors.white,
+                color: isDark ? AppColors.surface : Colors.white,
                 borderRadius: AppRadius.large,
-                border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                border: Border.all(color: isDark ? AppColors.border : const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,9 +102,9 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
                     child: Container(
                       width: 200,
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF131B2E) : Colors.white,
+                        color: isDark ? AppColors.surface : Colors.white,
                         borderRadius: AppRadius.medium,
-                        border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                        border: Border.all(color: isDark ? AppColors.border : const Color(0xFFE2E8F0)),
                       ),
                       padding: const EdgeInsets.all(AppSpacing.md),
                       child: Column(
@@ -141,7 +141,7 @@ class SavingsGoalsDashboardWidget extends ConsumerWidget {
                                 borderRadius: AppRadius.small,
                                 child: LinearProgressIndicator(
                                   value: pct > 1.0 ? 1.0 : pct,
-                                  backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                                  backgroundColor: isDark ? AppColors.border : const Color(0xFFE2E8F0),
                                   valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
                                   minHeight: 6,
                                 ),

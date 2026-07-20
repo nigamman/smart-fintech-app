@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
 
 class SkeletonLoader extends StatefulWidget {
   final double width;
@@ -57,7 +58,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+    final baseColor = isDark ? AppColors.border : const Color(0xFFE2E8F0);
 
     return AnimatedBuilder(
       animation: _animation,

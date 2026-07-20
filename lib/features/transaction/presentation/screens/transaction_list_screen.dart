@@ -310,7 +310,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 // Check if any transactions are encrypted and locked
                 final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
                 final preferences = ref.watch(preferencesProvider);
-                final isLocked = hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null);
+                final isLocked = (preferences.isEncryptionEnabled && preferences.syncPassphrase == null) ||
+                                  (hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null));
 
                 // Group transactions by date
                 final grouped = <String, List<Transaction>>{};

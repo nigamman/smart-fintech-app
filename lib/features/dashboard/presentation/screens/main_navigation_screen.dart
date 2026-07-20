@@ -18,6 +18,7 @@ import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../transaction/domain/entities/transaction.dart';
+import '../../../transaction/data/models/transaction_model.dart';
 
 final mainNavigationIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -80,10 +81,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       }
     });
 
-    // Prompt new users to setup Privacy Shield PIN if not enabled
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndPromptPinSetup();
-    });
   }
 
   @override
@@ -387,15 +384,22 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<List<Transaction>>>(transactionsStreamProvider, (previous, next) {
-      final transactions = next.value ?? [];
-      final preferences = ref.read(preferencesProvider);
-      final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
-      final isLocked = hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null);
+      if (next is AsyncData<List<Transaction>>) {
+        final transactions = next.value;
+        final preferences = ref.read(preferencesProvider);
+        final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
+        final isLocked = (preferences.isEncryptionEnabled && preferences.syncPassphrase == null) ||
+                         (hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null));
  
-      if (isLocked) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showAutoUnlockSheet(context);
-        });
+        if (isLocked) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showAutoUnlockSheet(context);
+          });
+        } else if (!hasEncrypted && !preferences.isEncryptionEnabled) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _checkAndPromptPinSetup();
+          });
+        }
       }
     });
 
@@ -603,7 +607,34 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
         }
       }
     } else {
-      if (_enteredPin == preferences.syncPassphrase) {
+      bool isPinCorrect;
+      if (ref.read(preferencesProvider.notifier).verifyPin(_enteredPin)) {
+        isPinCorrect = true;
+      } else if (preferences.syncPassphrase != null) {
+        isPinCorrect = _enteredPin == preferences.syncPassphrase;
+      } else {
+        // Fresh install/re-login scenario: verify against encrypted database entries
+        final transactions = ref.read(transactionsStreamProvider).value ?? [];
+        final encryptedTxs = transactions.where((tx) => tx.isEncrypted).toList();
+        if (encryptedTxs.isNotEmpty) {
+          try {
+            final testTx = encryptedTxs.first;
+            if (testTx is TransactionModel) {
+              testTx.decrypt(_enteredPin);
+            } else {
+              (testTx as TransactionModel).decrypt(_enteredPin);
+            }
+            isPinCorrect = true;
+          } catch (_) {
+            isPinCorrect = false;
+          }
+        } else {
+          // If there are no encrypted transactions, fallback to true so the user is not locked out
+          isPinCorrect = true;
+        }
+      }
+
+      if (isPinCorrect) {
         ref.read(preferencesProvider.notifier).setPassphrase(_enteredPin);
         Navigator.pop(context);
         scaffoldMessenger.showSnackBar(

@@ -58,6 +58,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "545085974690-n7qp4f7dt0e2a5vfvs489to9vbihu7q2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nigamman.fumet",
+            "certificate_hash": "553c863873a05bb2acbe5147ff189abc4a94a60c"
+          }
+        },
+        {
           "client_id": "545085974690-30qmmg04gchtg274jsoepjssj6s8184s.apps.googleusercontent.com",
           "client_type": 3
         }

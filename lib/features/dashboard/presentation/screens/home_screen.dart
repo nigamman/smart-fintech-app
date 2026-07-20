@@ -303,6 +303,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         monthlyIncome: dashboardData.monthlyIncome,
                         totalExpense: dashboardData.totalExpense,
                         monthlyExpense: dashboardData.monthlyExpense,
+                        todayExpense: dashboardData.todayExpense,
                         monthlySavingsGoal: dashboardData.monthlySavingsGoal,
                         healthScore: score,
                       ),
@@ -356,79 +357,86 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: attentionAlerts.length,
-                                separatorBuilder: (context, index) => const Divider(
-                                  height: 16,
-                                  color: AppColors.border,
-                                  thickness: 0.5,
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: attentionAlerts.length > 3 ? 190.0 : double.infinity,
                                 ),
-                                itemBuilder: (context, index) {
-                                  final alert = attentionAlerts[index];
-                                  final rowContent = Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: (alert['color'] as Color).withOpacity(0.3),
-                                            width: 1.0,
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: attentionAlerts.length > 3
+                                      ? const BouncingScrollPhysics()
+                                      : const NeverScrollableScrollPhysics(),
+                                  itemCount: attentionAlerts.length,
+                                  separatorBuilder: (context, index) => const Divider(
+                                    height: 16,
+                                    color: AppColors.border,
+                                    thickness: 0.5,
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final alert = attentionAlerts[index];
+                                    final rowContent = Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: (alert['color'] as Color).withOpacity(0.3),
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            alert['icon'] as IconData,
+                                            color: alert['color'] as Color,
+                                            size: 14,
                                           ),
                                         ),
-                                        child: Icon(
-                                          alert['icon'] as IconData,
-                                          color: alert['color'] as Color,
-                                          size: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              alert['text']?.toString() ?? '',
-                                              style: AppTextStyles.body.copyWith(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold,
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                alert['text']?.toString() ?? '',
+                                                style: AppTextStyles.body.copyWith(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              alert['subtitle']?.toString() ?? '',
-                                              style: AppTextStyles.caption.copyWith(
-                                                fontSize: 11,
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                alert['subtitle']?.toString() ?? '',
+                                                style: AppTextStyles.caption.copyWith(
+                                                  fontSize: 11,
+                                                ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        alert['tag']?.toString() ?? '',
-                                        style: AppTextStyles.label.copyWith(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.disabledText,
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          alert['tag']?.toString() ?? '',
+                                          style: AppTextStyles.label.copyWith(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.disabledText,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  );
-                                  if (alert['onTap'] != null) {
-                                    return InkWell(
-                                      borderRadius: BorderRadius.circular(10),
-                                      onTap: alert['onTap'] as VoidCallback,
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                                        child: rowContent,
-                                      ),
+                                      ],
                                     );
-                                  }
-                                  return rowContent;
-                                },
+                                    if (alert['onTap'] != null) {
+                                      return InkWell(
+                                        borderRadius: BorderRadius.circular(10),
+                                        onTap: alert['onTap'] as VoidCallback,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                                          child: rowContent,
+                                        ),
+                                      );
+                                    }
+                                    return rowContent;
+                                  },
+                                ),
                               ),
                             ],
                           ),

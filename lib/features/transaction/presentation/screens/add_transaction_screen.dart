@@ -120,7 +120,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     
     // Parse list of friends from splitWith comma-separated string
     if (tx?.splitWith != null && tx!.splitWith!.trim().isNotEmpty) {
-      _splitFriends = tx.splitWith!.split(', ').where((s) => s.trim().isNotEmpty).toList();
+      _splitFriends = tx.splitWith!.split(', ').where((s) => s.trim().isNotEmpty).map((s) => s.replaceAll('[PAID]', '').trim()).toList();
     } else {
       _splitFriends = ['Aakash Kumar', 'Priya Sharma'];
     }

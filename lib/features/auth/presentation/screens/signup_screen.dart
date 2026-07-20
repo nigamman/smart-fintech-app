@@ -55,12 +55,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final String cleanIncome = _incomeController.text.replaceAll(',', '').trim();
     final String cleanSavings = _savingGoalController.text.replaceAll(',', '').trim();
 
+    final income = double.tryParse(cleanIncome) ?? 0.0;
+    final savings = double.tryParse(cleanSavings) ?? 0.0;
+    if (savings >= income) {
+      FumetSnackBar.showError(context, 'Savings goal must be less than monthly income');
+      return;
+    }
+
     await ref.read(authControllerProvider.notifier).signUp(
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
-      monthlyIncome: double.parse(cleanIncome),
-      monthlySavingsGoal: double.parse(cleanSavings),
+      monthlyIncome: income,
+      monthlySavingsGoal: savings,
     );
   }
 

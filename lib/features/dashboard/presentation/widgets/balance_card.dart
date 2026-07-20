@@ -15,6 +15,7 @@ class BalanceCard extends ConsumerStatefulWidget {
   final double monthlyIncome;
   final double totalExpense;
   final double monthlyExpense;
+  final double todayExpense;
   final double monthlySavingsGoal;
   final int healthScore;
 
@@ -25,6 +26,7 @@ class BalanceCard extends ConsumerStatefulWidget {
     required this.monthlyIncome,
     required this.totalExpense,
     required this.monthlyExpense,
+    required this.todayExpense,
     required this.monthlySavingsGoal,
     this.healthScore = 100,
   });
@@ -36,8 +38,7 @@ class BalanceCard extends ConsumerStatefulWidget {
 class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProviderStateMixin {
   late final AnimationController _arcController;
   late Animation<double> _arcProgressAnimation;
-  late double _targetPct;
-  late double _limit;
+  double _targetPct = 0.0;
 
   @override
   void initState() {
@@ -46,23 +47,56 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     );
+    _updateProgress(animateFromZero: true);
+  }
 
-    _limit = widget.monthlyIncome > 0 ? (widget.monthlyIncome / 30.0) : 2000.0;
-    _targetPct = (_limit > 0 ? (widget.safeToSpend / _limit) : 0.5).clamp(0.0, 1.0);
+  @override
+  void didUpdateWidget(BalanceCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.safeToSpend != widget.safeToSpend ||
+        oldWidget.monthlyIncome != widget.monthlyIncome ||
+        oldWidget.monthlyExpense != widget.monthlyExpense ||
+        oldWidget.todayExpense != widget.todayExpense ||
+        oldWidget.monthlySavingsGoal != widget.monthlySavingsGoal) {
+      _updateProgress();
+    }
+  }
 
-    // Sequence: 0.0 -> 1.0 (Full) -> Target Pct (Settle)
-    _arcProgressAnimation = TweenSequence<double>([
-      TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 40,
-      ),
-      TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: _targetPct).chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 60,
-      ),
-    ]).animate(_arcController);
+  void _updateProgress({bool animateFromZero = false}) {
+    final now = DateTime.now();
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    final remainingDays = (lastDay - now.day) + 1;
+    final pastExpense = (widget.monthlyExpense - widget.todayExpense).clamp(0.0, double.infinity);
+    final dailyBudget = (widget.monthlyIncome - widget.monthlySavingsGoal - pastExpense) / remainingDays;
 
-    _arcController.forward();
+    final limit = dailyBudget > 0 ? dailyBudget : (widget.monthlyIncome / 30.0);
+    final newTargetPct = (limit > 0 ? (widget.safeToSpend / limit) : 0.5).clamp(0.0, 1.0);
+
+    if (animateFromZero) {
+      _targetPct = newTargetPct;
+      _arcProgressAnimation = TweenSequence<double>([
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)),
+          weight: 40,
+        ),
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 1.0, end: _targetPct).chain(CurveTween(curve: Curves.easeOutBack)),
+          weight: 60,
+        ),
+      ]).animate(_arcController);
+      _arcController.forward(from: 0.0);
+    } else {
+      final startPct = _targetPct;
+      _targetPct = newTargetPct;
+      _arcProgressAnimation = Tween<double>(
+        begin: startPct,
+        end: _targetPct,
+      ).animate(CurvedAnimation(
+        parent: _arcController,
+        curve: Curves.easeInOutCubic,
+      ));
+      _arcController.forward(from: 0.0);
+    }
   }
 
   @override
@@ -104,7 +138,7 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
                    borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '(Monthly Income - Savings Goal - Monthly Expenses)\n÷\nRemaining Days in Month',
+                  '[(Monthly Income - Savings Goal - Past Expenses)\n÷\nRemaining Days in Month]\n-\nSpent Today',
                   style: AppTextStyles.body.copyWith(
                     fontWeight: FontWeight.bold,
                     height: 1.5,
@@ -122,11 +156,25 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
               const SizedBox(height: 6),
               _buildCalcRow('Monthly Savings Goal:', '- $currency${widget.monthlySavingsGoal.toStringAsFixed(0)}', isNegative: true),
               const SizedBox(height: 6),
-              _buildCalcRow('Monthly Expenses:', '- $currency${widget.monthlyExpense.toStringAsFixed(0)}', isNegative: true),
-              const Divider(height: 16, color: AppColors.border),
-              _buildCalcRow('Remaining Budget:', '$currency${(widget.monthlyIncome - widget.monthlySavingsGoal - widget.monthlyExpense).toStringAsFixed(0)}', isBold: true),
-              const SizedBox(height: 6),
-              _buildCalcRow('Remaining Days:', '$remainingDays days left'),
+              
+              (() {
+                final pastExpense = (widget.monthlyExpense - widget.todayExpense).clamp(0.0, double.infinity);
+                final dailyBudget = (widget.monthlyIncome - widget.monthlySavingsGoal - pastExpense) / remainingDays;
+                
+                return Column(
+                  children: [
+                    _buildCalcRow('Past Expenses (excl. today):', '- $currency${pastExpense.toStringAsFixed(0)}', isNegative: true),
+                    const Divider(height: 16, color: AppColors.border),
+                    _buildCalcRow('Pacing Budget Remaining:', '$currency${(widget.monthlyIncome - widget.monthlySavingsGoal - pastExpense).toStringAsFixed(0)}', isBold: true),
+                    const SizedBox(height: 6),
+                    _buildCalcRow('Remaining Days (incl. today):', '$remainingDays days left'),
+                    const Divider(height: 16, color: AppColors.border),
+                    _buildCalcRow('Today\'s Daily Budget:', '$currency${dailyBudget.toStringAsFixed(0)}', isBold: true),
+                    const SizedBox(height: 6),
+                    _buildCalcRow('Today\'s Expenses:', '- $currency${widget.todayExpense.toStringAsFixed(0)}', isNegative: true),
+                  ],
+                );
+              })(),
               const Divider(height: 16, color: AppColors.border),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

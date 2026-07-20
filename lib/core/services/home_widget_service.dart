@@ -102,6 +102,7 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
     double totalIncome = 0;
     double totalExpense = 0;
     double monthlyExpense = 0;
+    double todayExpense = 0;
     final now = DateTime.now();
     final categoryCounts = <String, int>{};
 
@@ -126,9 +127,12 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
         // Parse date for current month comparison
         final dateStr = data['transactionDate'] as String?;
         if (dateStr != null) {
-          final txDate = DateTime.tryParse(dateStr);
+          final txDate = DateTime.tryParse(dateStr)?.toLocal();
           if (txDate != null && txDate.year == now.year && txDate.month == now.month) {
             monthlyExpense += expenseAmount;
+            if (txDate.day == now.day) {
+              todayExpense += expenseAmount;
+            }
           }
         }
       }
@@ -148,7 +152,10 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
     final remainingDays = (lastDay - now.day) + 1;
     final daysDivider = remainingDays < 1 ? 1 : remainingDays;
-    final safeToSpend = (monthlyIncome - monthlySavingsGoal - monthlyExpense) / daysDivider;
+
+    final monthlyExpenseExcludingToday = (monthlyExpense - todayExpense).clamp(0.0, double.infinity);
+    final dailyBudget = (monthlyIncome - monthlySavingsGoal - monthlyExpenseExcludingToday) / daysDivider;
+    final safeToSpend = dailyBudget - todayExpense;
 
     // Read currency from Hive in background
     await Hive.initFlutter();

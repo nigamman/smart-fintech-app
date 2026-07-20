@@ -50,6 +50,7 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
     double totalIncome = 0;
     double totalExpense = 0;
     double monthlyExpense = 0;
+    double todayExpense = 0;
     final now = DateTime.now();
 
     for (final transaction in transactions) {
@@ -64,9 +65,12 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
         totalExpense += expenseAmount;
 
         // Calculate current month's expenses only
-        final txDate = transaction.transactionDate;
+        final txDate = transaction.transactionDate.toLocal();
         if (txDate.year == now.year && txDate.month == now.month) {
           monthlyExpense += expenseAmount;
+          if (txDate.day == now.day) {
+            todayExpense += expenseAmount;
+          }
         }
       }
     }
@@ -85,8 +89,9 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
     final remainingDays = (lastDay - now.day) + 1;
     final daysDivider = remainingDays < 1 ? 1 : remainingDays;
 
-    final safeToSpend =
-        (monthlyIncome - monthlySavingsGoal - monthlyExpense) / daysDivider;
+    final monthlyExpenseExcludingToday = (monthlyExpense - todayExpense).clamp(0.0, double.infinity);
+    final dailyBudget = (monthlyIncome - monthlySavingsGoal - monthlyExpenseExcludingToday) / daysDivider;
+    final safeToSpend = dailyBudget - todayExpense;
 
     return DashboardData(
       userName: userData['name'],
@@ -97,6 +102,7 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
       totalBalance: totalBalance,
       safeToSpend: safeToSpend,
       monthlyExpense: monthlyExpense,
+      todayExpense: todayExpense,
       recentTransactions: transactions.take(5).toList(),
     );
   }

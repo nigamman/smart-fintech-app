@@ -55,6 +55,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
+    if (savingsVal >= incomeVal) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Savings goal must be less than monthly income')),
+      );
+      return;
+    }
+
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(profileControllerProvider.notifier).updateProfile(

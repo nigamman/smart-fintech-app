@@ -41,12 +41,42 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     super.dispose();
   }
 
+  bool isFriendPaid(Transaction tx, String friendName) {
+    if (tx.isSplitPaid) return true;
+    final rawFriends = tx.splitWith ?? '';
+    final List<String> parts = rawFriends.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    for (final part in parts) {
+      if (part.replaceAll('[PAID]', '').trim().toLowerCase() == friendName.toLowerCase()) {
+        return part.contains('[PAID]');
+      }
+    }
+    return false;
+  }
+
+  String markFriendAsPaid(String splitWith, String friendName) {
+    final List<String> parts = splitWith.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    for (int i = 0; i < parts.length; i++) {
+      final cleanName = parts[i].replaceAll('[PAID]', '').trim();
+      if (cleanName.toLowerCase() == friendName.toLowerCase()) {
+        if (!parts[i].contains('[PAID]')) {
+          parts[i] = '$cleanName [PAID]';
+        }
+      }
+    }
+    return parts.join(', ');
+  }
+
+  bool areAllFriendsPaid(String updatedSplitWith) {
+    final List<String> parts = updatedSplitWith.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    return parts.every((part) => part.contains('[PAID]'));
+  }
+
   Future<void> _settleAllWithFriend(List<Transaction> friendTransactions, String friendName) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(transactionControllerProvider.notifier);
 
-    // Filter to unpaid transactions
-    final unpaid = friendTransactions.where((tx) => !tx.isSplitPaid).toList();
+    // Filter to unpaid transactions for this specific friend
+    final unpaid = friendTransactions.where((tx) => !(tx.isSplitPaid || isFriendPaid(tx, friendName))).toList();
     if (unpaid.isEmpty) return;
 
     final String capitalizedFriendName = friendName.isNotEmpty
@@ -75,7 +105,10 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     if (confirm == true) {
       try {
         for (final tx in unpaid) {
-          // 1. Mark original split transaction as paid
+          final updatedSplitWith = markFriendAsPaid(tx.splitWith ?? '', friendName);
+          final allPaid = areAllFriendsPaid(updatedSplitWith);
+
+          // 1. Mark original split transaction friend status in database
           await notifier.updateTransaction(
             id: tx.id,
             amount: tx.amount,
@@ -85,13 +118,16 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
             date: tx.transactionDate,
             createdAt: tx.createdAt,
             isSplit: true,
-            splitWith: tx.splitWith,
+            splitWith: updatedSplitWith,
             splitPercentage: tx.splitPercentage,
-            isSplitPaid: true,
+            isSplitPaid: allPaid,
           );
 
           // 2. Calculate friend's share
-          final friendShare = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
+          final rawFriends = tx.splitWith ?? 'Unknown Friend';
+          final List<String> friendsList = rawFriends.split(', ').where((s) => s.trim().isNotEmpty).toList();
+          final friendsCount = friendsList.isEmpty ? 1 : friendsList.length;
+          final friendShare = tx.amount / (1.0 + friendsCount);
 
           // 3. Create a new repayment income transaction to reflect cash flow
           final txName = tx.note != null && tx.note!.isNotEmpty
@@ -155,7 +191,7 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                         width: 38,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                          color: isDark ? AppColors.border : const Color(0xFFE2E8F0),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -214,7 +250,12 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                         separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (itemCtx, index) {
                           final tx = txList[index];
-                          final friendOwes = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
+                          final rawFriends = tx.splitWith ?? 'Unknown Friend';
+                          final friendsList = rawFriends.split(', ').where((s) => s.trim().isNotEmpty).toList();
+                          final friendsCount = friendsList.isEmpty ? 1 : friendsList.length;
+                          final friendOwes = tx.amount / (1.0 + friendsCount);
+                          final isPaid = tx.isSplitPaid || isFriendPaid(tx, friendName);
+
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(
@@ -235,14 +276,14 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                                   '$currency${friendOwes.toStringAsFixed(0)}',
                                   style: AppTextStyles.body.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: tx.isSplitPaid ? AppColors.secondaryText : AppColors.income,
-                                    decoration: tx.isSplitPaid ? TextDecoration.lineThrough : null,
+                                    color: isPaid ? AppColors.secondaryText : AppColors.income,
+                                    decoration: isPaid ? TextDecoration.lineThrough : null,
                                   ),
                                 ),
                                 Text(
-                                  tx.isSplitPaid ? 'Repaid' : 'Pending',
+                                  isPaid ? 'Repaid' : 'Pending',
                                   style: AppTextStyles.caption.copyWith(
-                                    color: tx.isSplitPaid ? AppColors.secondaryText : AppColors.warning,
+                                    color: isPaid ? AppColors.secondaryText : AppColors.warning,
                                     fontSize: 9,
                                   ),
                                 ),
@@ -307,14 +348,23 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
           );
         }
 
-        // Grouping by friend
+        // Grouping by friend (splitting comma-separated list of friends and stripping [PAID] tags)
         final Map<String, List<Transaction>> friendsLedger = {};
         for (final tx in splitTransactions) {
-          final friend = tx.splitWith ?? 'Unknown Friend';
-          if (!friendsLedger.containsKey(friend)) {
-            friendsLedger[friend] = [];
+          final rawFriends = tx.splitWith ?? 'Unknown Friend';
+          final List<String> friendsList = rawFriends.split(', ').where((s) => s.trim().isNotEmpty).map((s) {
+            return s.replaceAll('[PAID]', '').trim();
+          }).toList();
+          if (friendsList.isEmpty) {
+            friendsList.add('Unknown Friend');
           }
-          friendsLedger[friend]!.add(tx);
+          
+          for (final friend in friendsList) {
+            if (!friendsLedger.containsKey(friend)) {
+              friendsLedger[friend] = [];
+            }
+            friendsLedger[friend]!.add(tx);
+          }
         }
 
         // Calculate outstanding amounts per friend
@@ -325,8 +375,15 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
           double outstanding = 0.0;
           double settledAmount = 0.0;
           for (final tx in txList) {
-            final share = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
-            if (!tx.isSplitPaid) {
+            final rawFriends = tx.splitWith ?? 'Unknown Friend';
+            final List<String> cleanFriends = rawFriends.split(', ').where((s) => s.trim().isNotEmpty).map((s) {
+              return s.replaceAll('[PAID]', '').trim();
+            }).toList();
+            final friendsCount = cleanFriends.isEmpty ? 1 : cleanFriends.length;
+            final share = tx.amount / (1.0 + friendsCount);
+
+            final isPaid = tx.isSplitPaid || isFriendPaid(tx, friend);
+            if (!isPaid) {
               if (tx.type == TransactionType.expense) {
                 outstanding += share;
               } else {
