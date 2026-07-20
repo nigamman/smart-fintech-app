@@ -277,6 +277,8 @@ class DashboardScreen extends ConsumerWidget {
                     totalBalance: data.totalBalance,
                     monthlyIncome: data.monthlyIncome,
                     totalExpense: data.totalExpense,
+                    monthlyExpense: data.monthlyExpense,
+                    monthlySavingsGoal: data.monthlySavingsGoal,
                   ),
 
                   VSpace.xl,

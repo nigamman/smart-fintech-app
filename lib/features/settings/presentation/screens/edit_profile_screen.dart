@@ -7,6 +7,8 @@ import '../../../../commons/widgets/loading_indicator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
+import '../../../../core/utils/thousands_formatter.dart';
+import '../../../../core/extensions/num_extensions.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -41,8 +43,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void _initializeValues(dynamic user) {
     if (_initialized) return;
     _nameController.text = user.name;
-    _incomeController.text = user.monthlyIncome.toStringAsFixed(0);
-    _savingsGoalController.text = user.monthlySavingsGoal.toStringAsFixed(0);
+    _incomeController.text = user.monthlyIncome.toCommaFormat();
+    _savingsGoalController.text = user.monthlySavingsGoal.toCommaFormat();
     _initialized = true;
   }
 
@@ -142,6 +144,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     TextFormField(
                       controller: _incomeController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [ThousandsFormatter()],
                       style: const TextStyle(color: Colors.white),
                       cursorColor: AppColors.primary,
                       decoration: InputDecoration(
@@ -169,7 +172,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                       validator: (val) {
                         if (val == null || val.isEmpty) return 'Income is required';
-                        final numVal = double.tryParse(val);
+                        final numVal = double.tryParse(val.replaceAll(',', ''));
                         if (numVal == null || numVal < 0) return 'Please enter a valid positive amount';
                         return null;
                       },
@@ -178,6 +181,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     TextFormField(
                       controller: _savingsGoalController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [ThousandsFormatter()],
                       style: const TextStyle(color: Colors.white),
                       cursorColor: AppColors.primary,
                       decoration: InputDecoration(
@@ -205,7 +209,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                       validator: (val) {
                         if (val == null || val.isEmpty) return 'Savings target is required';
-                        final numVal = double.tryParse(val);
+                        final numVal = double.tryParse(val.replaceAll(',', ''));
                         if (numVal == null || numVal < 0) return 'Please enter a valid positive amount';
                         return null;
                       },
@@ -216,8 +220,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       child: InkWell(
                         onTap: () async {
                           if (!_formKey.currentState!.validate()) return;
-                          final incomeVal = double.parse(_incomeController.text);
-                          final savingsVal = double.parse(_savingsGoalController.text);
+                          final incomeVal = double.parse(_incomeController.text.replaceAll(',', ''));
+                          final savingsVal = double.parse(_savingsGoalController.text.replaceAll(',', ''));
                           final messenger = ScaffoldMessenger.of(context);
                           
                           try {

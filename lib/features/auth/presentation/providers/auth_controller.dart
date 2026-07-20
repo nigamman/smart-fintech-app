@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/app_user.dart';
 import 'auth_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
 final authControllerProvider =
 AsyncNotifierProvider<AuthController, AppUser?>(
@@ -24,6 +25,14 @@ class AuthController extends AsyncNotifier<AppUser?> {
         email: email,
         password: password,
       );
+    });
+  }
+
+  Future<void> loginWithGoogle() async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      return ref.read(authRepositoryProvider).loginWithGoogle();
     });
   }
 
@@ -57,6 +66,7 @@ class AuthController extends AsyncNotifier<AppUser?> {
 
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
+    ref.read(preferencesProvider.notifier).clearUserPreferences();
 
     state = const AsyncData(null);
   }

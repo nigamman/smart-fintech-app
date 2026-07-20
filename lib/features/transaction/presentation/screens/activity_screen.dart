@@ -18,6 +18,8 @@ import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/transaction_providers.dart';
+import '../../../dashboard/presentation/screens/main_navigation_screen.dart';
+import '../../../auth/presentation/widgets/premium_widgets.dart';
 import 'split_ledger_screen.dart';
 
 class ActivityScreen extends ConsumerStatefulWidget {
@@ -32,6 +34,10 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   bool _isSearching = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+
+  String _selectedType = 'All'; // 'All', 'Expense', 'Income'
+  TransactionCategory? _selectedCategory; // null means 'All'
+  String _sortBy = 'Date (Newest)'; // 'Date (Newest)', 'Date (Oldest)', 'Amount (High to Low)', 'Amount (Low to High)'
 
   String _getDateHeader(DateTime date) {
     final now = DateTime.now();
@@ -65,7 +71,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
       final userAsync = ref.read(userProfileStreamProvider);
       final user = userAsync.value;
       final name = user?.name ?? 'User';
-      final email = user?.email ?? 'user@fintrack.app';
+      final email = user?.email ?? 'user@fumet.app';
       await ExportService.exportTransactionsToPdf(txs, currency, name, email);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
@@ -89,6 +95,522 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filter Transactions',
+                        style: GoogleFonts.fraunces(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            _selectedType = 'All';
+                            _selectedCategory = null;
+                            _sortBy = 'Date (Newest)';
+                          });
+                          setState(() {});
+                        },
+                        child: Text(
+                          'Reset All',
+                          style: AppTextStyles.label.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Section 1: Type
+                  Text(
+                    'TRANSACTION TYPE',
+                    style: AppTextStyles.label.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: ['All', 'Expense', 'Income'].map((type) {
+                      final selected = _selectedType == type;
+                      return GestureDetector(
+                        onTap: () {
+                          setSheetState(() {
+                            _selectedType = type;
+                          });
+                          setState(() {});
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.primary : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: selected ? AppColors.primary : AppColors.border,
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Text(
+                            type,
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: selected ? AppColors.background : AppColors.primaryText,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Section 2: Sort By
+                  Text(
+                    'SORT BY',
+                    style: AppTextStyles.label.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ['Date (Newest)', 'Date (Oldest)', 'Amount (High to Low)', 'Amount (Low to High)'].map((sortOption) {
+                      final selected = _sortBy == sortOption;
+                      String label = 'Newest';
+                      if (sortOption == 'Date (Oldest)') label = 'Oldest';
+                      if (sortOption == 'Amount (High to Low)') label = 'High to Low';
+                      if (sortOption == 'Amount (Low to High)') label = 'Low to High';
+                      return GestureDetector(
+                        onTap: () {
+                          setSheetState(() {
+                            _sortBy = sortOption;
+                          });
+                          setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.primary : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: selected ? AppColors.primary : AppColors.border,
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Text(
+                            label,
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: selected ? AppColors.background : AppColors.primaryText,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Section 3: Categories
+                  Text(
+                    'CATEGORY',
+                    style: AppTextStyles.label.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 38,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        // 'All' Category item
+                        GestureDetector(
+                          onTap: () {
+                            setSheetState(() {
+                              _selectedCategory = null;
+                            });
+                            setState(() {});
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _selectedCategory == null ? AppColors.primary : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _selectedCategory == null ? AppColors.primary : AppColors.border,
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Text(
+                              'All Categories',
+                              style: AppTextStyles.caption.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _selectedCategory == null ? AppColors.background : AppColors.primaryText,
+                              ),
+                            ),
+                          ),
+                        ),
+                        ...TransactionCategory.values.map((cat) {
+                          final selected = _selectedCategory == cat;
+                          final name = cat.name[0].toUpperCase() + cat.name.substring(1);
+                          return GestureDetector(
+                            onTap: () {
+                              setSheetState(() {
+                                _selectedCategory = cat;
+                              });
+                              setState(() {});
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: selected ? AppColors.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: selected ? AppColors.primary : AppColors.border,
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Text(
+                                name,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: selected ? AppColors.background : AppColors.primaryText,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Apply Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Apply Filters',
+                        style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.background,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFlatTransactionList(List<Transaction> txs, String currency) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border, width: 1.0),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: List.generate(txs.length, (index) {
+              final tx = txs[index];
+              final isExpense = tx.type == TransactionType.expense;
+              final prefix = isExpense ? '-' : '+';
+              final amountText = '$prefix$currency${tx.amount.toStringAsFixed(0)}';
+              final formatTime = DateFormat('d MMM, h:mm a').format(tx.transactionDate);
+
+              return Column(
+                children: [
+                  GestureDetector(
+                    onTap: tx.isEncrypted
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Unlock Zero-Knowledge Sync to view/edit this entry.'),
+                                action: SnackBarAction(
+                                  label: 'Unlock',
+                                  textColor: AppColors.primary,
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isDismissible: true,
+                                      enableDrag: true,
+                                      isScrollControlled: true,
+                                      backgroundColor: AppColors.background,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      builder: (context) => const PinUnlockSheet(),
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          }
+                        : () => context.push('/add-transaction', extra: tx),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: isExpense
+                                  ? (tx.isSplit ? const Color(0xFFC8A05B) : AppColors.expense)
+                                  : AppColors.income,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      tx.note ?? tx.category.name,
+                                      style: AppTextStyles.body.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    if (tx.isEncrypted) ...[
+                                      const SizedBox(width: 6),
+                                      const Icon(
+                                        Icons.lock_outline_rounded,
+                                        size: 11,
+                                        color: AppColors.disabledText,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${tx.isSplit ? "Split" : tx.category.name}  •  $formatTime',
+                                  style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            amountText,
+                            style: AppTextStyles.mono.copyWith(
+                              fontSize: 14,
+                              color: isExpense ? AppColors.expense : AppColors.income,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (index < txs.length - 1)
+                    Container(
+                      height: 0.5,
+                      color: AppColors.border,
+                    ),
+                ],
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGroupedTransactionList(
+    List<DateTime> sortedDates,
+    Map<DateTime, List<Transaction>> grouped,
+    String currency,
+  ) {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: sortedDates.length,
+      itemBuilder: (context, dateIndex) {
+        final date = sortedDates[dateIndex];
+        final dayTxs = grouped[date]!;
+
+        return FadeInSlideUp(
+          delayMs: 150 + (dateIndex * 60),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 14, bottom: 8),
+                child: Text(
+                  _getDateHeader(date),
+                  style: GoogleFonts.fraunces(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.disabledText,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: dayTxs.map<Widget>((tx) {
+                    final isExpense = tx.type == TransactionType.expense;
+                    final prefix = isExpense ? '-' : '+';
+                    final amountText = '$prefix$currency${tx.amount.toStringAsFixed(0)}';
+                    final formatTime = DateFormat('h:mm a').format(tx.transactionDate);
+
+                    return Column(
+                      children: [
+                        GestureDetector(
+                          onTap: tx.isEncrypted
+                              ? () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text('Unlock Zero-Knowledge Sync to view/edit this entry.'),
+                                      action: SnackBarAction(
+                                        label: 'Unlock',
+                                        textColor: AppColors.primary,
+                                        onPressed: () {
+                                          showModalBottomSheet(
+                                            context: context,
+                                            isDismissible: true,
+                                            enableDrag: true,
+                                            isScrollControlled: true,
+                                            backgroundColor: AppColors.background,
+                                            shape: const RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.zero,
+                                            ),
+                                            builder: (context) => const PinUnlockSheet(),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                }
+                              : () => context.push('/add-transaction', extra: tx),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: isExpense
+                                        ? (tx.isSplit ? const Color(0xFFC8A05B) : AppColors.expense)
+                                        : AppColors.income,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            tx.note ?? tx.category.name,
+                                            style: AppTextStyles.body.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          if (tx.isEncrypted) ...[
+                                            const SizedBox(width: 6),
+                                            const Icon(
+                                              Icons.lock_outline_rounded,
+                                              size: 11,
+                                              color: AppColors.disabledText,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${tx.isSplit ? "Split" : tx.category.name}  •  $formatTime',
+                                        style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  amountText,
+                                  style: AppTextStyles.mono.copyWith(
+                                    fontSize: 14,
+                                    color: isExpense ? AppColors.expense : AppColors.income,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (dayTxs.last != tx)
+                          Container(
+                            height: 0.5,
+                            color: AppColors.border,
+                          ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -123,21 +645,22 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Gold FT badge
+                  // Gold App logo badge
                   Container(
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: AppColors.primary,
+                        width: 1.0,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'FT',
-                      style: GoogleFonts.fraunces(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.background,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: Image.asset(
+                        'assets/icons/icon-master-1024.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -152,6 +675,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                             if (!_isSearching) {
                               _searchQuery = '';
                               _searchController.clear();
+                              _selectedType = 'All';
+                              _selectedCategory = null;
+                              _sortBy = 'Date (Newest)';
                             }
                           });
                         },
@@ -259,30 +785,60 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
               // Search field (collapsible)
               if (_isSearching) ...[
-                TextFormField(
-                  controller: _searchController,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: 'Search Swiggy, Freelance, Rent...',
-                    hintStyle: AppTextStyles.caption,
-                    prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.medium,
-                      borderSide: BorderSide(color: AppColors.border),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _searchController,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: 'Search Swiggy, Freelance, Rent...',
+                          hintStyle: AppTextStyles.caption,
+                          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadius.medium,
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: AppRadius.medium,
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val.toLowerCase();
+                          });
+                        },
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: AppRadius.medium,
-                      borderSide: BorderSide(color: AppColors.border),
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: (_selectedType != 'All' || _selectedCategory != null || _sortBy != 'Date (Newest)')
+                            ? AppColors.primary.withOpacity(0.15)
+                            : AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: (_selectedType != 'All' || _selectedCategory != null || _sortBy != 'Date (Newest)')
+                              ? AppColors.primary
+                              : AppColors.border,
+                          width: 1.0,
+                        ),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.filter_list_rounded,
+                          color: (_selectedType != 'All' || _selectedCategory != null || _sortBy != 'Date (Newest)')
+                              ? AppColors.primary
+                              : AppColors.primaryText,
+                        ),
+                        onPressed: () => _showFilterSheet(context),
+                      ),
                     ),
-                  ),
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val.toLowerCase();
-                    });
-                  },
+                  ],
                 ),
                 const SizedBox(height: 16),
               ],
@@ -307,8 +863,41 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                                 (tx.note?.toLowerCase() ?? '').contains(_searchQuery) ||
                                 tx.category.name.toLowerCase().contains(_searchQuery) ||
                                 tx.amount.toString().contains(_searchQuery);
-                            return matchesSearch;
+                            final matchesType = _selectedType == 'All' ||
+                                (_selectedType == 'Expense' && tx.type == TransactionType.expense) ||
+                                (_selectedType == 'Income' && tx.type == TransactionType.income);
+                            final matchesCategory = _selectedCategory == null ||
+                                tx.category == _selectedCategory;
+                            return matchesSearch && matchesType && matchesCategory;
                           }).toList();
+
+                          // Sort lists
+                          if (_sortBy == 'Date (Newest)') {
+                            filtered.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+                          } else if (_sortBy == 'Date (Oldest)') {
+                            filtered.sort((a, b) => a.transactionDate.compareTo(b.transactionDate));
+                          } else if (_sortBy == 'Amount (High to Low)') {
+                            filtered.sort((a, b) => b.amount.compareTo(a.amount));
+                          } else if (_sortBy == 'Amount (Low to High)') {
+                            filtered.sort((a, b) => a.amount.compareTo(b.amount));
+                          }
+
+                          // Group by Date
+                          final Map<DateTime, List<Transaction>> grouped = {};
+                          for (final tx in filtered) {
+                            final dateOnly = DateTime(
+                              tx.transactionDate.year,
+                              tx.transactionDate.month,
+                              tx.transactionDate.day,
+                            );
+                            grouped.putIfAbsent(dateOnly, () => []).add(tx);
+                          }
+                          final sortedDates = grouped.keys.toList();
+                          if (_sortBy == 'Date (Oldest)') {
+                            sortedDates.sort((a, b) => a.compareTo(b));
+                          } else {
+                            sortedDates.sort((a, b) => b.compareTo(a));
+                          }
 
                           // Calculate stats
                           final totalIncome = filtered
@@ -321,104 +910,98 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
                           final net = totalIncome - totalExpenses;
 
-                          // Group by Date
-                          final Map<DateTime, List<Transaction>> grouped = {};
-                          for (final tx in filtered) {
-                            final dateOnly = DateTime(
-                              tx.transactionDate.year,
-                              tx.transactionDate.month,
-                              tx.transactionDate.day,
-                            );
-                            grouped.putIfAbsent(dateOnly, () => []).add(tx);
-                          }
-                          final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Triple stats row
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'INCOME',
-                                      '$currency${_formatStat(totalIncome)}',
-                                      AppColors.primary,
+                              FadeInSlideUp(
+                                delayMs: 0,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'INCOME',
+                                        '$currency${_formatStat(totalIncome)}',
+                                        AppColors.primary,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'EXPENSES',
-                                      '$currency${_formatStat(totalExpenses)}',
-                                      AppColors.expense,
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'EXPENSES',
+                                        '$currency${_formatStat(totalExpenses)}',
+                                        AppColors.expense,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'NET',
-                                      '${net >= 0 ? "+" : "-"}$currency${_formatStat(net)}',
-                                      net >= 0 ? AppColors.income : AppColors.expense,
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'NET',
+                                        '${net >= 0 ? "+" : "-"}$currency${_formatStat(net)}',
+                                        net >= 0 ? AppColors.income : AppColors.expense,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 18),
 
                               // Down arrows outlined export buttons
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: BouncyButton(
-                                      onTap: () => _exportPdf(filtered, currency),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: AppColors.primary.withOpacity(0.4),
-                                            width: 1.0,
+                              FadeInSlideUp(
+                                delayMs: 80,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: BouncyButton(
+                                        onTap: () => _exportPdf(filtered, currency),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: AppColors.primary.withOpacity(0.4),
+                                              width: 1.0,
+                                            ),
                                           ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          '↓ Export PDF',
-                                          style: AppTextStyles.label.copyWith(
-                                            color: AppColors.primary,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11.5,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: BouncyButton(
-                                      onTap: () => _exportCsv(filtered),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: AppColors.primary.withOpacity(0.4),
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          '↓ Export CSV',
-                                          style: AppTextStyles.label.copyWith(
-                                            color: AppColors.primary,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11.5,
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '↓ Export PDF',
+                                            style: AppTextStyles.label.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11.5,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: BouncyButton(
+                                        onTap: () => _exportCsv(filtered),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: AppColors.primary.withOpacity(0.4),
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '↓ Export CSV',
+                                            style: AppTextStyles.label.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 24),
 
@@ -437,122 +1020,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                                         onRefresh: () async {
                                           ref.invalidate(transactionsStreamProvider);
                                         },
-                                        child: ListView.builder(
-                                          physics: const AlwaysScrollableScrollPhysics(),
-                                          itemCount: sortedDates.length,
-                                          itemBuilder: (context, dateIndex) {
-                                            final date = sortedDates[dateIndex];
-                                            final dayTxs = grouped[date]!;
-
-                                            return Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                // Date header (expressive Fraunces serif)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(top: 14, bottom: 8),
-                                                  child: Text(
-                                                    _getDateHeader(date),
-                                                    style: GoogleFonts.fraunces(
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppColors.disabledText,
-                                                      letterSpacing: 0.8,
-                                                    ),
-                                                  ),
-                                                ),
-                                                
-                                                // Day Card list container
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.surface,
-                                                    borderRadius: BorderRadius.circular(20),
-                                                    border: Border.all(color: AppColors.border, width: 1.0),
-                                                  ),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                                  child: Column(
-                                                    children: dayTxs.map<Widget>((tx) {
-                                                      final isExpense = tx.type == TransactionType.expense;
-                                                      final prefix = isExpense ? '-' : '+';
-                                                      final amountText = '$prefix$currency${tx.amount.toStringAsFixed(0)}';
-                                                      final formatTime = DateFormat('h:mm a').format(tx.transactionDate);
-
-                                                      return Column(
-                                                        children: [
-                                                          GestureDetector(
-                                                            onTap: () => context.push('/add-transaction', extra: tx),
-                                                            child: Padding(
-                                                              padding: const EdgeInsets.symmetric(vertical: 14),
-                                                              child: Row(
-                                                                children: [
-                                                                  // Mini color square block
-                                                                  Container(
-                                                                    width: 10,
-                                                                    height: 10,
-                                                                    decoration: BoxDecoration(
-                                                                      color: isExpense
-                                                                          ? (tx.isSplit ? const Color(0xFFC8A05B) : AppColors.expense)
-                                                                          : AppColors.income,
-                                                                      borderRadius: BorderRadius.circular(2),
-                                                                    ),
-                                                                  ),
-                                                                  const SizedBox(width: 16),
-                                                                  Expanded(
-                                                                    child: Column(
-                                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                                      children: [
-                                                                        Row(
-                                                                          children: [
-                                                                            Text(
-                                                                              tx.note ?? tx.category.name,
-                                                                              style: AppTextStyles.body.copyWith(
-                                                                                fontWeight: FontWeight.bold,
-                                                                                fontSize: 14,
-                                                                              ),
-                                                                            ),
-                                                                            if (tx.isEncrypted) ...[
-                                                                              const SizedBox(width: 6),
-                                                                              const Icon(
-                                                                                Icons.lock_outline_rounded,
-                                                                                size: 11,
-                                                                                color: AppColors.disabledText,
-                                                                              ),
-                                                                            ],
-                                                                          ],
-                                                                        ),
-                                                                        const SizedBox(height: 2),
-                                                                        Text(
-                                                                          '${tx.isSplit ? "Split" : tx.category.name}  •  $formatTime',
-                                                                          style: AppTextStyles.caption.copyWith(fontSize: 11),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                  ),
-                                                                  // Monospace amount
-                                                                  Text(
-                                                                    amountText,
-                                                                    style: AppTextStyles.mono.copyWith(
-                                                                      fontSize: 14,
-                                                                      color: isExpense ? AppColors.expense : AppColors.income,
-                                                                    ),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          if (dayTxs.last != tx)
-                                                            Container(
-                                                              height: 0.5,
-                                                              color: AppColors.border,
-                                                            ),
-                                                        ],
-                                                      );
-                                                    }).toList(),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        ),
+                                        child: _sortBy.startsWith('Amount')
+                                            ? _buildFlatTransactionList(filtered, currency)
+                                            : _buildGroupedTransactionList(sortedDates, grouped, currency),
                                       ),
                               ),
                             ],

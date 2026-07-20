@@ -8,6 +8,7 @@ class DashboardData {
   final double totalExpense;
   final double totalBalance;
   final double safeToSpend;
+  final double monthlyExpense;
   final List<TransactionModel> recentTransactions;
 
   const DashboardData({
@@ -18,6 +19,7 @@ class DashboardData {
     required this.totalExpense,
     required this.totalBalance,
     required this.safeToSpend,
+    required this.monthlyExpense,
     required this.recentTransactions,
   });
 }

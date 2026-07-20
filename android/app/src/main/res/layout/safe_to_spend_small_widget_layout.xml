@@ -26,7 +26,7 @@
                 android:layout_height="wrap_content"
                 android:text="SAFE TODAY"
                 android:textAllCaps="true"
-                android:textColor="#8A8D9F"
+                android:textColor="#8A887D"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium" />
@@ -36,18 +36,18 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="₹1,240"
-                android:textColor="#D5B266"
+                android:textColor="#C8A05B"
                 android:textSize="26sp"
                 android:textStyle="bold"
                 android:layout_marginTop="4dp"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="serif" />
 
             <TextView
                 android:id="@+id/widget_total_balance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Total Cash: ₹0"
-                android:textColor="#7F8295"
+                android:textColor="#C5C1B1"
                 android:textSize="11sp"
                 android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif" />
@@ -62,7 +62,7 @@
             android:layout_alignParentStart="true"
             android:layout_marginBottom="4dp"
             android:text="15 days left"
-            android:textColor="#7F8295"
+            android:textColor="#C5C1B1"
             android:textSize="11sp"
             android:fontFamily="sans-serif" />
 
@@ -74,7 +74,7 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentEnd="true"
             android:text="+"
-            android:textColor="#18191D"
+            android:textColor="#14140F"
             android:textSize="20sp"
             android:textStyle="bold"
             android:gravity="center"

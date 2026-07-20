@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../commons/widgets/bouncy_button.dart';
 import '../../../../commons/widgets/app_text_field.dart';
+import '../../../../core/utils/thousands_formatter.dart';
 import '../../../../core/enums/transaction_category.dart';
 import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -269,7 +270,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     if (_isSplit && _selectedType == TransactionType.expense && _splitFriends.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one roommate to split with')),
+        const SnackBar(content: Text('Please add at least one friends to split with')),
       );
       return;
     }
@@ -524,6 +525,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         child: TextField(
                           controller: _amountController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [ThousandsFormatter()],
                           textAlign: TextAlign.left,
                           cursorColor: AppColors.primary, // Custom gold cursor
                           cursorWidth: 2.0,
@@ -773,7 +775,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Divide the amount with roommates',
+                            'Divide the amount with friends',
                             style: AppTextStyles.caption.copyWith(fontSize: 11),
                           ),
                         ],
@@ -875,7 +877,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     style: const TextStyle(color: Colors.white, fontSize: 13),
                                     cursorColor: AppColors.primary,
                                     decoration: InputDecoration(
-                                      hintText: 'Enter roommate name',
+                                      hintText: 'Enter friend name',
                                       hintStyle: const TextStyle(color: AppColors.disabledText, fontSize: 12),
                                       filled: true,
                                       fillColor: AppColors.background,

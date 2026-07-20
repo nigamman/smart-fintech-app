@@ -47,6 +47,14 @@ class QuickActionsSection extends StatelessWidget {
           const SizedBox(width: 10),
 
           QuickActionButton(
+            icon: Icons.chat_bubble_outline_rounded,
+            title: 'Ask AI',
+            onTap: () => context.push('/ai-counsel'),
+          ),
+
+          const SizedBox(width: 10),
+
+          QuickActionButton(
             icon: Icons.calendar_month_outlined,
             title: 'Calendar',
             onTap: () => context.push('/calendar'),

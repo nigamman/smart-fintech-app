@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="fintech_app"
+        android:label="Fumet"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -25,22 +25,22 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- Deep link configuration -->
-            <intent-filter android:label="fintrack">
+            <intent-filter android:label="fumet">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="fintrack" android:host="add-transaction" />
+                <data android:scheme="fumet" android:host="add-transaction" />
             </intent-filter>
-            <intent-filter android:label="fintrack">
+            <intent-filter android:label="fumet">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="fintrack" android:host="dashboard" />
+                <data android:scheme="fumet" android:host="dashboard" />
             </intent-filter>
         </activity>
 
         <!-- AppWidget Provider Receiver (Medium) -->
-        <receiver android:name="com.example.fintech_app.SafeToSpendWidgetProvider" 
+        <receiver android:name="com.nigamman.fumet.SafeToSpendWidgetProvider" 
                   android:exported="true"
                   android:label="Safe to Spend (Medium)">
             <intent-filter>
@@ -51,7 +51,7 @@
         </receiver>
 
         <!-- AppWidget Provider Receiver (Small) -->
-        <receiver android:name="com.example.fintech_app.SafeToSpendSmallWidgetProvider" 
+        <receiver android:name="com.nigamman.fumet.SafeToSpendSmallWidgetProvider" 
                   android:exported="true"
                   android:label="Safe to Spend (Small)">
             <intent-filter>

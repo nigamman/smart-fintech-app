@@ -1,4 +1,4 @@
-package com.example.fintech_app
+package com.nigamman.fumet
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -13,8 +13,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.fintech_app/widgets"
-    private val PIN_ACTION = "com.example.fintech_app.WIDGET_PINNED"
+    private val CHANNEL = "com.nigamman.fumet/widgets"
+    private val PIN_ACTION = "com.nigamman.fumet.WIDGET_PINNED"
     private var pinReceiver: BroadcastReceiver? = null
     private var methodChannel: MethodChannel? = null
 

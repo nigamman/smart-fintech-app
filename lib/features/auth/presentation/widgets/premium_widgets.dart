@@ -210,14 +210,14 @@ class _BouncingButtonState extends State<BouncingButton>
 
 /// A beautiful logo with a rounded rectangular gold border and gold text inside,
 /// complete with a slow breathing/pulse scale animation.
-class FinTrackLogo extends StatefulWidget {
-  const FinTrackLogo({super.key});
+class FumetLogo extends StatefulWidget {
+  const FumetLogo({super.key});
 
   @override
-  State<FinTrackLogo> createState() => _FinTrackLogoState();
+  State<FumetLogo> createState() => _FumetLogoState();
 }
 
-class _FinTrackLogoState extends State<FinTrackLogo>
+class _FumetLogoState extends State<FumetLogo>
     with SingleTickerProviderStateMixin {
   late AnimationController _logoController;
   late Animation<double> _scaleAnimation;
@@ -278,12 +278,13 @@ class _FinTrackLogoState extends State<FinTrackLogo>
               ],
             ),
             alignment: Alignment.center,
-            child: Text(
-              'FT',
-              style: GoogleFonts.fraunces(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/icons/icon-master-1024.png',
+                fit: BoxFit.cover,
+                width: 64,
+                height: 64,
               ),
             ),
           ),

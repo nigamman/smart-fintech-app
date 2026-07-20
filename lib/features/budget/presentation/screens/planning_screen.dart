@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +21,11 @@ import '../../../subscription/presentation/providers/subscription_providers.dart
 import '../../domain/entities/budget.dart';
 import '../providers/budget_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
+import '../../../auth/presentation/widgets/premium_widgets.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
+
+// Riverpod provider to manage and sync the selected planning sub-tab globally
+final planningTabProvider = StateProvider<int>((ref) => 0); // 0 for Budgets, 1 for Goals, 2 for Subs
 
 class PlanningScreen extends ConsumerStatefulWidget {
   const PlanningScreen({super.key});
@@ -29,7 +35,6 @@ class PlanningScreen extends ConsumerStatefulWidget {
 }
 
 class _PlanningScreenState extends ConsumerState<PlanningScreen> {
-  int _selectedTab = 0; // 0 for Budgets, 1 for Goals, 2 for Subs
 
   Color _getCategoryColor(TransactionCategory category) {
     switch (category) {
@@ -75,6 +80,21 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
   @override
   Widget build(BuildContext context) {
     final currency = ref.watch(preferencesProvider).currency;
+    final userAsync = ref.watch(userProfileStreamProvider);
+
+    final userInitials = userAsync.maybeWhen(
+      data: (profile) {
+        if (profile != null && profile.name.trim().isNotEmpty) {
+          final parts = profile.name.trim().split(' ');
+          if (parts.length >= 2) {
+            return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+          }
+          return parts[0][0].toUpperCase();
+        }
+        return 'U';
+      },
+      orElse: () => 'U',
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -90,81 +110,91 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
-              // Top Custom Header Row (FT & R)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.transparent,
-                    child: Container(
+              FadeInSlideUp(
+                delayMs: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Gold App logo badge
+                    Container(
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.primary, width: 1.0),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'FT',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
                           color: AppColors.primary,
-                          fontSize: 11,
+                          width: 1.0,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: Image.asset(
+                          'assets/icons/icon-master-1024.png',
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.push('/settings'),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.transparent,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 1.0),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'R',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                            fontSize: 11,
+
+                    // Profile avatar group
+                    BouncyButton(
+                      onTap: () => context.push('/settings'),
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.primary, width: 1.0),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            userInitials,
+                            style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 18),
 
-              // Title "Planning"
-              Text(
-                'Planning',
-                style: GoogleFonts.fraunces(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+              // Title "Planning" - Delay 80ms
+              FadeInSlideUp(
+                delayMs: 80,
+                child: Text(
+                  'Planning',
+                  style: GoogleFonts.fraunces(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Horizontal Segmented Switcher Row
-              Container(
-                height: 44,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border, width: 0.5),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: _buildTabButton('Budgets', 0)),
-                    Expanded(child: _buildTabButton('Goals', 1)),
-                    Expanded(child: _buildTabButton('Subs', 2)),
-                  ],
+              // Horizontal Segmented Switcher Row - Delay 150ms
+              FadeInSlideUp(
+                delayMs: 150,
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildTabButton('Budgets', 0)),
+                      Expanded(child: _buildTabButton('Goals', 1)),
+                      Expanded(child: _buildTabButton('Subs', 2)),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -179,12 +209,11 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
   }
 
   Widget _buildTabButton(String label, int index) {
-    final isActive = _selectedTab == index;
+    final selectedTab = ref.watch(planningTabProvider);
+    final isActive = selectedTab == index;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedTab = index;
-        });
+        ref.read(planningTabProvider.notifier).state = index;
       },
       child: Container(
         decoration: BoxDecoration(
@@ -205,7 +234,8 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
   }
 
   Widget _buildTabContent(String currency) {
-    switch (_selectedTab) {
+    final selectedTab = ref.watch(planningTabProvider);
+    switch (selectedTab) {
       case 0:
         return _buildBudgetsTab(currency);
       case 1:
@@ -242,65 +272,74 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
           children: [
             if (progress.totalLimit > 0) ...[
               if (progress.isExceeded)
-                _buildBudgetAlertBanner(
-                  context,
-                  '🚨 Budget Exceeded!',
-                  'You have spent $currency${progress.totalSpent.toStringAsFixed(0)} which exceeds your overall budget limit of $currency${progress.totalLimit.toStringAsFixed(0)} by $currency${(progress.totalSpent - progress.totalLimit).toStringAsFixed(0)}.',
-                  const Color(0xFFBC5B3E),
+                FadeInSlideUp(
+                  delayMs: 200,
+                  child: _buildBudgetAlertBanner(
+                    context,
+                    '🚨 Budget Exceeded!',
+                    'You have spent $currency${progress.totalSpent.toStringAsFixed(0)} which exceeds your overall budget limit of $currency${progress.totalLimit.toStringAsFixed(0)} by $currency${(progress.totalSpent - progress.totalLimit).toStringAsFixed(0)}.',
+                    const Color(0xFFBC5B3E),
+                  ),
                 )
               else if (progress.isWarning80)
-                _buildBudgetAlertBanner(
-                  context,
-                  '⚠️ Warning: Near Budget Limit',
-                  'You have spent ${(progress.progressPercentage * 100).toStringAsFixed(0)}% of your monthly budget limit. Please spend cautiously.',
-                  const Color(0xFFC8A05B),
+                FadeInSlideUp(
+                  delayMs: 200,
+                  child: _buildBudgetAlertBanner(
+                    context,
+                    '⚠️ Warning: Near Budget Limit',
+                    'You have spent ${(progress.progressPercentage * 100).toStringAsFixed(0)}% of your monthly budget limit. Please spend cautiously.',
+                    const Color(0xFFC8A05B),
+                  ),
                 ),
               const SizedBox(height: 12),
             ],
             // MONTHLY LIMIT card
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border, width: 1.0),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'MONTHLY LIMIT',
-                        style: AppTextStyles.label.copyWith(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.disabledText,
-                          letterSpacing: 0.8,
+            FadeInSlideUp(
+              delayMs: 220,
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'MONTHLY LIMIT',
+                          style: AppTextStyles.label.copyWith(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.disabledText,
+                            letterSpacing: 0.8,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '$currency${progress.totalSpent.toStringAsFixed(0)} / $currency${progress.totalLimit.toStringAsFixed(0)}',
-                        style: AppTextStyles.mono.copyWith(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
+                        Text(
+                          '$currency${progress.totalSpent.toStringAsFixed(0)} / $currency${progress.totalLimit.toStringAsFixed(0)}',
+                          style: AppTextStyles.mono.copyWith(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: AnimatedLinearProgressBar(
-                      progress: totalPct,
-                      minHeight: 6,
-                      backgroundColor: AppColors.border.withOpacity(0.3),
-                      valueColor: AppColors.primary,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: AnimatedLinearProgressBar(
+                        progress: totalPct,
+                        minHeight: 6,
+                        backgroundColor: AppColors.border.withOpacity(0.3),
+                        valueColor: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -314,7 +353,9 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                 ),
               )
             else
-              ...progress.categoryProgresses.map((catProgress) {
+              ...progress.categoryProgresses.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final catProgress = entry.value;
                 final catPct = catProgress.limit > 0 ? (catProgress.spent / catProgress.limit) : 0.0;
                 final catName = catProgress.category.name[0].toUpperCase() + catProgress.category.name.substring(1);
 
@@ -324,67 +365,70 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                   orElse: () => null,
                 );
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    onTap: budgetEntity == null
-                        ? null
-                        : () => context.push('/add-budget', extra: budgetEntity),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border, width: 1.0),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: _getCategoryColor(catProgress.category),
-                                      borderRadius: BorderRadius.circular(2),
+                return FadeInSlideUp(
+                  delayMs: 250 + (idx * 50),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: budgetEntity == null
+                          ? null
+                          : () => context.push('/add-budget', extra: budgetEntity),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border, width: 1.0),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: _getCategoryColor(catProgress.category),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    catName,
-                                    style: AppTextStyles.body.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Colors.white,
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      catName,
+                                      style: AppTextStyles.body.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                '$currency${catProgress.spent.toStringAsFixed(0)} / $currency${catProgress.limit.toStringAsFixed(0)}',
-                                style: AppTextStyles.monoSecondary.copyWith(
-                                  fontSize: 11.5,
-                                  color: AppColors.primaryText.withOpacity(0.9),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: AnimatedLinearProgressBar(
-                              progress: catPct,
-                              minHeight: 5,
-                              backgroundColor: AppColors.border.withOpacity(0.3),
-                              valueColor: _getProgressBarColor(catPct),
+                                Text(
+                                  '$currency${catProgress.spent.toStringAsFixed(0)} / $currency${catProgress.limit.toStringAsFixed(0)}',
+                                  style: AppTextStyles.monoSecondary.copyWith(
+                                    fontSize: 11.5,
+                                    color: AppColors.primaryText.withOpacity(0.9),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: AnimatedLinearProgressBar(
+                                progress: catPct,
+                                minHeight: 5,
+                                backgroundColor: AppColors.border.withOpacity(0.3),
+                                valueColor: _getProgressBarColor(catPct),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -392,21 +436,24 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
               }),
 
             const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () => context.push('/add-budget'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.0),
-                ),
-                child: Text(
-                  'Add Category Budget',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                    fontSize: 13,
+            FadeInSlideUp(
+              delayMs: 300 + (progress.categoryProgresses.length * 50),
+              child: GestureDetector(
+                onTap: () => context.push('/add-budget'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.0),
+                  ),
+                  child: Text(
+                    'Add Category Budget',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
@@ -440,81 +487,92 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Text('No savings goals set yet.', style: AppTextStyles.bodySecondary),
               ),
-              _buildAddGoalButton(),
+              FadeInSlideUp(
+                delayMs: 200,
+                child: _buildAddGoalButton(),
+              ),
             ],
           );
         }
 
         return Column(
           children: [
-            ...goals.map((goal) {
+            ...goals.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final goal = entry.value;
               final pct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  onTap: () => _showGoalDetailsSheet(context, ref, goal, currency),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border, width: 1.0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    borderRadius: BorderRadius.circular(2),
+              return FadeInSlideUp(
+                delayMs: 200 + (idx * 50),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () => _showGoalDetailsSheet(context, ref, goal, currency),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  goal.name,
-                                  style: AppTextStyles.body.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: Colors.white,
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    goal.name,
+                                    style: AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              '$currency${goal.currentAmount.toStringAsFixed(0)} / $currency${goal.targetAmount.toStringAsFixed(0)}',
-                              style: AppTextStyles.monoSecondary.copyWith(
-                                fontSize: 11.5,
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: AnimatedLinearProgressBar(
-                            progress: pct,
-                            minHeight: 5,
-                            backgroundColor: AppColors.border.withOpacity(0.3),
-                            valueColor: AppColors.primary,
+                              Text(
+                                '$currency${goal.currentAmount.toStringAsFixed(0)} / $currency${goal.targetAmount.toStringAsFixed(0)}',
+                                style: AppTextStyles.monoSecondary.copyWith(
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: AnimatedLinearProgressBar(
+                              progress: pct,
+                              minHeight: 5,
+                              backgroundColor: AppColors.border.withOpacity(0.3),
+                              valueColor: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               );
             }),
             const SizedBox(height: 12),
-            _buildAddGoalButton(),
+            FadeInSlideUp(
+              delayMs: 250 + (goals.length * 50),
+              child: _buildAddGoalButton(),
+            ),
           ],
         );
       },
@@ -566,14 +624,19 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Text('No recurring bills logged yet.', style: AppTextStyles.bodySecondary),
               ),
-              _buildAddSubButton(),
+              FadeInSlideUp(
+                delayMs: 200,
+                child: _buildAddSubButton(),
+              ),
             ],
           );
         }
 
         return Column(
           children: [
-            ...subs.map((sub) {
+            ...subs.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final sub = entry.value;
               final days = sub.nextBillingDate.difference(DateTime.now()).inDays;
               final String dueLabel;
               if (days == 0) {
@@ -584,70 +647,76 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                 dueLabel = 'Due in $days days';
               }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  onTap: () => _showBillActionsSheet(context, ref, sub, currency),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border, width: 1.0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF5E7A8A), // Blue steel
-                                    borderRadius: BorderRadius.circular(2),
+              return FadeInSlideUp(
+                delayMs: 200 + (idx * 50),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () => _showBillActionsSheet(context, ref, sub, currency),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF5E7A8A), // Blue steel
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  sub.name,
-                                  style: AppTextStyles.body.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: Colors.white,
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    sub.name,
+                                    style: AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              '$currency${sub.amount.toStringAsFixed(0)} / ${sub.billingCycle.name.toLowerCase()}',
-                              style: AppTextStyles.monoSecondary.copyWith(
-                                fontSize: 11.5,
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          dueLabel,
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: days <= 2 ? const Color(0xFFBC5B3E) : AppColors.disabledText,
+                              Text(
+                                '$currency${sub.amount.toStringAsFixed(0)} / ${sub.billingCycle.name.toLowerCase()}',
+                                style: AppTextStyles.monoSecondary.copyWith(
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 10),
+                          Text(
+                            dueLabel,
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: days <= 2 ? const Color(0xFFBC5B3E) : AppColors.disabledText,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               );
             }),
             const SizedBox(height: 12),
-            _buildAddSubButton(),
+            FadeInSlideUp(
+              delayMs: 250 + (subs.length * 50),
+              child: _buildAddSubButton(),
+            ),
           ],
         );
       },

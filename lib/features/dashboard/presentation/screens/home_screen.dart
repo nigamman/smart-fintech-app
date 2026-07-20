@@ -12,6 +12,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
+import '../../../budget/presentation/screens/planning_screen.dart';
+import '../../../transaction/domain/entities/transaction.dart';
+import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../budget/presentation/providers/budget_providers.dart';
 import '../../../savings_goal/presentation/providers/savings_goal_providers.dart';
 import '../../../subscription/presentation/providers/subscription_providers.dart';
@@ -97,33 +101,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           data: (dashboardData) {
             final List<Map<String, dynamic>> attentionAlerts = [];
 
-            // Budget Alerts (Overall + Category Specific)
-            budgetProgressAsync.whenData((progress) {
-              // 1. Overall monthly budget alerts
-              if (progress.totalLimit > 0) {
-                if (progress.isExceeded) {
+            // 1. Budget Alerts (Overall + Category Specific)
+            final budgetProgress = budgetProgressAsync.value;
+            if (budgetProgress != null) {
+              // Overall monthly budget alerts
+              if (budgetProgress.totalLimit > 0) {
+                if (budgetProgress.isExceeded) {
                   attentionAlerts.add({
                     'text': 'Monthly budget exceeded',
-                    'subtitle': 'Limit $currency${progress.totalLimit.toStringAsFixed(0)} • Spent $currency${progress.totalSpent.toStringAsFixed(0)}',
+                    'subtitle': 'Limit $currency${budgetProgress.totalLimit.toStringAsFixed(0)} • Spent $currency${budgetProgress.totalSpent.toStringAsFixed(0)}',
                     'color': AppColors.expense,
                     'icon': Icons.warning_amber_rounded,
                     'tag': 'Limit',
+                    'onTap': () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                      ref.read(planningTabProvider.notifier).state = 0;
+                    },
                   });
-                } else if (progress.isWarning80) {
-                  final remaining = progress.totalLimit - progress.totalSpent;
-                  final pct = (progress.progressPercentage * 100).toStringAsFixed(0);
+                } else if (budgetProgress.isWarning80) {
+                  final remaining = budgetProgress.totalLimit - budgetProgress.totalSpent;
+                  final pct = (budgetProgress.progressPercentage * 100).toStringAsFixed(0);
                   attentionAlerts.add({
                     'text': 'Monthly budget at $pct%',
                     'subtitle': '$currency${remaining.toStringAsFixed(0)} remaining for the month',
                     'color': const Color(0xFFC8A05B),
                     'icon': Icons.warning_amber_rounded,
                     'tag': 'Limit',
+                    'onTap': () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                      ref.read(planningTabProvider.notifier).state = 0;
+                    },
                   });
                 }
               }
 
-              // 2. Individual category budget alerts
-              for (final catProgress in progress.categoryProgresses) {
+              // Individual category budget alerts
+              for (final catProgress in budgetProgress.categoryProgresses) {
                 final catName = catProgress.category.name[0].toUpperCase() + catProgress.category.name.substring(1);
                 if (catProgress.isExceeded) {
                   attentionAlerts.add({
@@ -132,6 +145,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     'color': AppColors.expense,
                     'icon': Icons.warning_amber_rounded,
                     'tag': 'Budget',
+                    'onTap': () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                      ref.read(planningTabProvider.notifier).state = 0;
+                    },
                   });
                 } else if (catProgress.isWarning80) {
                   final remaining = catProgress.limit - catProgress.spent;
@@ -142,13 +159,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     'color': const Color(0xFFC8A05B),
                     'icon': Icons.warning_amber_rounded,
                     'tag': 'Budget',
+                    'onTap': () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                      ref.read(planningTabProvider.notifier).state = 0;
+                    },
                   });
                 }
               }
-            });
+            }
 
-            // Subscription Renewal Alert
-            subsAsync.whenData((subs) {
+            // 2. Subscription Renewal Alerts
+            final subs = subsAsync.value;
+            if (subs != null) {
               final closeRenewals = subs.where((sub) {
                 final days = sub.nextBillingDate.difference(DateTime.now()).inDays;
                 return days >= 0 && days <= 2;
@@ -162,12 +184,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   'color': AppColors.primary,
                   'icon': Icons.repeat_rounded,
                   'tag': 'Sub',
+                  'onTap': () => context.push('/add-subscription'),
                 });
               }
-            });
+            }
 
-            // Goals Alert
-            goalsAsync.whenData((goals) {
+            // 3. Savings Goals Alerts
+            final goals = goalsAsync.value;
+            if (goals != null) {
               for (final goal in goals) {
                 if (goal.currentAmount < goal.targetAmount && goal.currentAmount / goal.targetAmount < 0.8) {
                   final remaining = goal.targetAmount - goal.currentAmount;
@@ -178,10 +202,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     'color': AppColors.primary,
                     'icon': Icons.flag_outlined,
                     'tag': 'Goal',
+                    'onTap': () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                      ref.read(planningTabProvider.notifier).state = 1;
+                    },
                   });
                 }
               }
-            });
+            }
+
+            // 4. Welcome guide alerts for new users (only if no active warning alerts are present)
+            if (attentionAlerts.isEmpty) {
+              if (goals != null && goals.isEmpty) {
+                attentionAlerts.add({
+                  'text': 'Set up your first Savings Vault',
+                  'subtitle': 'Target monthly savings goal is $currency${dashboardData.monthlySavingsGoal.toStringAsFixed(0)}.',
+                  'color': AppColors.primary,
+                  'icon': Icons.savings_outlined,
+                  'tag': 'Vault',
+                  'onTap': () {
+                    ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                    ref.read(planningTabProvider.notifier).state = 1;
+                  },
+                });
+              }
+
+              if (budgetProgress == null || budgetProgress.totalLimit == 0) {
+                attentionAlerts.add({
+                  'text': 'Create a monthly budget limit',
+                  'subtitle': 'Plan spending limits based on your $currency${dashboardData.monthlyIncome.toStringAsFixed(0)} income.',
+                  'color': const Color(0xFFC8A05B),
+                  'icon': Icons.pie_chart_outline_rounded,
+                  'tag': 'Budget',
+                  'onTap': () {
+                    ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                    ref.read(planningTabProvider.notifier).state = 0;
+                  },
+                });
+              }
+
+              if (dashboardData.recentTransactions.isEmpty) {
+                attentionAlerts.add({
+                  'text': 'No transactions logged yet',
+                  'subtitle': "Start logging your daily expenses to track your cashflow.",
+                  'color': AppColors.primary,
+                  'icon': Icons.add_circle_outline_rounded,
+                  'tag': 'Track',
+                  'onTap': () => context.push('/add-transaction'),
+                });
+              }
+            }
 
             // Calculate Health Score
             final score = _calculateHealthScore(
@@ -232,6 +302,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         totalBalance: dashboardData.totalBalance,
                         monthlyIncome: dashboardData.monthlyIncome,
                         totalExpense: dashboardData.totalExpense,
+                        monthlyExpense: dashboardData.monthlyExpense,
+                        monthlySavingsGoal: dashboardData.monthlySavingsGoal,
                         healthScore: score,
                       ),
                     ),
@@ -295,7 +367,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                                 itemBuilder: (context, index) {
                                   final alert = attentionAlerts[index];
-                                  return Row(
+                                  final rowContent = Row(
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.all(6),
@@ -345,6 +417,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                     ],
                                   );
+                                  if (alert['onTap'] != null) {
+                                    return InkWell(
+                                      borderRadius: BorderRadius.circular(10),
+                                      onTap: alert['onTap'] as VoidCallback,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                                        child: rowContent,
+                                      ),
+                                    );
+                                  }
+                                  return rowContent;
                                 },
                               ),
                             ],
@@ -371,14 +454,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             onTap: () => context.push('/add-transaction?type=income'),
                           ),
                           _buildQuickActionButton(
-                            icon: Icons.swap_horiz_rounded,
-                            label: 'Split',
-                            onTap: () => context.push('/split-ledger'),
+                            icon: Icons.repeat_rounded,
+                            label: 'Subscription',
+                            onTap: () => context.push('/add-subscription'),
                           ),
                           _buildQuickActionButton(
                             icon: Icons.auto_awesome_rounded,
                             label: 'Ask AI',
-                            onTap: () => context.push('/insights'),
+                            onTap: () => context.push('/ai-counsel'),
                           ),
                         ],
                       ),
@@ -398,16 +481,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 "Today's ledger",
                                 style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
                               ),
-                              BouncyButton(
-                                onTap: () => context.push('/transactions'),
-                                child: Text(
-                                  'View all',
-                                  style: AppTextStyles.label.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
+                               BouncyButton(
+                                 onTap: () {
+                                   ref.read(mainNavigationIndexProvider.notifier).state = 1;
+                                 },
+                                 child: Text(
+                                   'View all',
+                                   style: AppTextStyles.label.copyWith(
+                                     color: AppColors.primary,
+                                     fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                           VSpace.md,
@@ -501,43 +586,243 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     VSpace.xl,
 
+                    // Stagger 5.5: Split Ledger Section
+                    (() {
+                      final transactions = ref.watch(transactionsStreamProvider).value ?? [];
+                      final splitTransactions = transactions.where((tx) => tx.isSplit).toList();
+
+                      // Grouping by friend
+                      final Map<String, List<Transaction>> friendsLedger = {};
+                      for (final tx in splitTransactions) {
+                        final friend = tx.splitWith ?? 'Unknown Friend';
+                        if (!friendsLedger.containsKey(friend)) {
+                          friendsLedger[friend] = [];
+                        }
+                        friendsLedger[friend]!.add(tx);
+                      }
+
+                      // Calculate outstanding amounts per friend
+                      final List<Map<String, dynamic>> friendBalances = [];
+                      friendsLedger.forEach((friend, txList) {
+                        double outstanding = 0.0;
+                        double settledAmount = 0.0;
+                        for (final tx in txList) {
+                          final share = tx.amount * ((tx.splitPercentage ?? 50.0) / 100);
+                          if (!tx.isSplitPaid) {
+                            if (tx.type == TransactionType.expense) {
+                              outstanding += share;
+                            } else {
+                              outstanding -= share;
+                            }
+                          } else {
+                            settledAmount += share;
+                          }
+                        }
+                        friendBalances.add({
+                          'name': friend,
+                          'outstanding': outstanding,
+                          'settledAmount': settledAmount,
+                        });
+                      });
+
+                      // Sort friend balances by outstanding amount (highest first)
+                      friendBalances.sort((a, b) => b['outstanding'].abs().compareTo(a['outstanding'].abs()));
+
+                      return FadeInWidget(
+                        delay: const Duration(milliseconds: 460),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Split ledger",
+                                  style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                BouncyButton(
+                                  onTap: () {
+                                    context.push('/split-ledger');
+                                  },
+                                  child: Text(
+                                    'View all',
+                                    style: AppTextStyles.label.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            VSpace.md,
+                            if (friendBalances.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                width: double.infinity,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border, width: 1.0),
+                                ),
+                                child: Text(
+                                  'No friend splits logged.',
+                                  style: AppTextStyles.bodySecondary.copyWith(fontSize: 12),
+                                ),
+                              )
+                            else
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border, width: 1.0),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: Column(
+                                  children: friendBalances.take(3).map((item) {
+                                    final name = item['name'] as String;
+                                    final outstanding = item['outstanding'] as double;
+                                    final settledAmount = item['settledAmount'] as double;
+                                    
+                                    final isOwed = outstanding > 0;
+                                    final isOwes = outstanding < 0;
+                                    final String statusText = isOwed
+                                        ? 'Owes you'
+                                        : (isOwes ? 'You owe' : 'Settled');
+                                    final Color statusColor = isOwed
+                                        ? AppColors.income
+                                        : (isOwes ? AppColors.expense : AppColors.secondaryText);
+
+                                    final prefix = isOwed ? '+' : (isOwes ? '-' : '');
+                                    final amountText = outstanding != 0
+                                        ? '$prefix$currency${outstanding.abs().toStringAsFixed(0)}'
+                                        : '$currency${settledAmount.toStringAsFixed(0)}';
+
+                                    final String capitalizedName = name.isNotEmpty
+                                        ? name[0].toUpperCase() + name.substring(1)
+                                        : name;
+
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      child: Row(
+                                        children: [
+                                          // Monogram circle
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: AppColors.primary.withOpacity(0.08),
+                                              border: Border.all(
+                                                color: AppColors.primary.withOpacity(0.4),
+                                                width: 1.0,
+                                              ),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                                              style: GoogleFonts.fraunces(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  capitalizedName,
+                                                  style: AppTextStyles.body.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  statusText,
+                                                  style: AppTextStyles.caption.copyWith(
+                                                    fontSize: 11,
+                                                    color: statusColor,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Balance amount or checkmark
+                                          if (outstanding == 0)
+                                            const Icon(
+                                              Icons.check_circle_rounded,
+                                              color: Color(0xFF7C9473), // Muted green check
+                                              size: 18,
+                                            )
+                                          else
+                                            Text(
+                                              amountText,
+                                              style: AppTextStyles.mono.copyWith(
+                                                fontSize: 14,
+                                                color: statusColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    })(),
+                    VSpace.xl,
+
                     // Stagger 6: Savings Vaults horizontal sliders
                     goalsAsync.maybeWhen(
                       data: (goals) {
                         if (goals.isEmpty) return const SizedBox.shrink();
-                        return FadeInWidget(
-                          delay: const Duration(milliseconds: 500),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Savings vaults',
-                                    style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  BouncyButton(
-                                    onTap: () => context.push('/savings-goals'),
-                                    child: Text(
-                                      'Manage',
-                                      style: AppTextStyles.label.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              VSpace.md,
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                physics: const BouncingScrollPhysics(),
-                                child: Row(
-                                  children: goals.map((goal) {
-                                    final pct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
-                                    return BouncyButton(
-                                      onTap: () => context.push('/savings-goals'),
+                         return FadeInWidget(
+                           delay: const Duration(milliseconds: 520),
+                           child: Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                             children: [
+                               Row(
+                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                 children: [
+                                   Text(
+                                     'Savings vaults',
+                                     style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                                   ),
+                                   BouncyButton(
+                                     onTap: () {
+                                       ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                                       ref.read(planningTabProvider.notifier).state = 1;
+                                     },
+                                     child: Text(
+                                       'Manage',
+                                       style: AppTextStyles.label.copyWith(
+                                         color: AppColors.primary,
+                                         fontWeight: FontWeight.bold,
+                                       ),
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                               VSpace.md,
+                               SingleChildScrollView(
+                                 scrollDirection: Axis.horizontal,
+                                 physics: const BouncingScrollPhysics(),
+                                 child: Row(
+                                   children: goals.map((goal) {
+                                     final pct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
+                                     return BouncyButton(
+                                       onTap: () {
+                                         ref.read(mainNavigationIndexProvider.notifier).state = 3;
+                                         ref.read(planningTabProvider.notifier).state = 1;
+                                       },
                                       child: Container(
                                         width: 150,
                                         margin: const EdgeInsets.only(right: 14, bottom: 4),
@@ -848,14 +1133,28 @@ class _AnimatedProgressRingState extends ConsumerState<AnimatedProgressRing> wit
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
+        final displayPct = (_animation.value * 100).toStringAsFixed(0);
         return SizedBox(
           width: widget.size,
           height: widget.size,
-          child: CircularProgressIndicator(
-            value: _animation.value.clamp(0.0, 1.0),
-            strokeWidth: 3.5,
-            backgroundColor: AppColors.border,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: _animation.value.clamp(0.0, 1.0),
+                strokeWidth: 3.5,
+                backgroundColor: AppColors.border,
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+              Text(
+                '$displayPct%',
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ),
         );
       },

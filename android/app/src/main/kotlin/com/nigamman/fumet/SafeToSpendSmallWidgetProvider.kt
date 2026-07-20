@@ -1,4 +1,4 @@
-package com.example.fintech_app
+package com.nigamman.fumet
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
@@ -32,7 +32,7 @@ class SafeToSpendSmallWidgetProvider : HomeWidgetProvider() {
                 val dashboardIntent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("fintrack://dashboard")
+                    Uri.parse("fumet://dashboard")
                 )
                 // Set pending intent on the root layout itself by omitting view ID or targeting the container
                 // RemoteViews requires a view ID, but we can set it on widget_title/widget_safe_to_spend or layout children
@@ -44,7 +44,7 @@ class SafeToSpendSmallWidgetProvider : HomeWidgetProvider() {
                 val addExpenseIntent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("fintrack://add-transaction?type=expense")
+                    Uri.parse("fumet://add-transaction?type=expense")
                 )
                 setOnClickPendingIntent(R.id.btn_add_custom, addExpenseIntent)
             }

@@ -124,6 +124,15 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
     );
     ref.invalidate(transactionsStreamProvider);
   }
+
+  void clearUserPreferences() {
+    _box.delete('isEncryptionEnabled');
+    _box.delete('syncPassphrase');
+    state = state.copyWith(
+      isEncryptionEnabled: false,
+      syncPassphrase: null,
+    );
+  }
 }
 
 final preferencesProvider = NotifierProvider<PreferencesNotifier, PreferencesState>(

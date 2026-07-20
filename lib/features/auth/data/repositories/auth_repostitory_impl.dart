@@ -62,6 +62,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AppUser> loginWithGoogle() async {
+    return await remoteDataSource.loginWithGoogle();
+  }
+
+  @override
   Future<void> forgotPassword({
     required String email,
   }) async {

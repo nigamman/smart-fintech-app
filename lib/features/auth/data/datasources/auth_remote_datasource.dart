@@ -20,6 +20,8 @@ abstract class AuthRemoteDataSource {
     required String password,
   });
 
+  Future<UserModel> loginWithGoogle();
+
   Future<void> forgotPassword({
     required String email,
   });

@@ -74,7 +74,7 @@ class ExportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'FinTrack Statement',
+                    'Fumet Statement',
                     style: pw.TextStyle(
                       fontSize: 24,
                       fontWeight: pw.FontWeight.bold,
@@ -126,7 +126,7 @@ class ExportService {
                       ],
                     ),
                     pw.Text(
-                      'Created via FinTrack App',
+                      'Created via Fumet App',
                       style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                     ),
                   ],
@@ -192,7 +192,7 @@ class ExportService {
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    'Download FinTrack App today on Android & iOS to secure your financial future!',
+                    'Download Fumet App today on Android & iOS to secure your financial future!',
                     style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
                   ),
                 ],

@@ -16,6 +16,7 @@ import '../features/budget/domain/entities/budget.dart';
 import '../features/budget/presentation/screens/budget_screen.dart';
 import '../features/budget/presentation/screens/add_budget_screen.dart';
 import '../core/enums/transaction_type.dart';
+import '../features/budget/presentation/screens/planning_screen.dart';
 import '../features/savings_goal/domain/entities/savings_goal.dart';
 import '../features/savings_goal/presentation/screens/savings_goal_list_screen.dart';
 import '../features/savings_goal/presentation/screens/add_savings_goal_screen.dart';
@@ -79,7 +80,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/transactions',
-        builder: (context, state) => const MainNavigationScreen(),
+        builder: (context, state) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(mainNavigationIndexProvider.notifier).state = 1;
+          });
+          return const MainNavigationScreen();
+        },
       ),
 
       GoRoute(
@@ -128,7 +134,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/savings-goals',
-        builder: (context, state) => const MainNavigationScreen(),
+        builder: (context, state) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(mainNavigationIndexProvider.notifier).state = 3;
+            ref.read(planningTabProvider.notifier).state = 1;
+          });
+          return const MainNavigationScreen();
+        },
       ),
 
       GoRoute(
@@ -184,9 +196,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
 
     redirect: (context, state) async {
-      final user = await ref.read(authRepositoryProvider).getCurrentUser();
-
       final location = state.matchedLocation;
+
+      // Allow the splash screen to load and run its initial delay
+      if (location == '/') return null;
+
+      final user = await ref.read(authRepositoryProvider).getCurrentUser();
 
       final isAuthRoute =
           location == '/login' ||

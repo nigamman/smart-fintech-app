@@ -1,4 +1,4 @@
-package com.example.fintech_app
+package com.nigamman.fumet
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
@@ -47,7 +47,7 @@ class SafeToSpendWidgetProvider : HomeWidgetProvider() {
                 val topCat1Intent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("fintrack://add-transaction?type=expense&category=$topCat1Name")
+                    Uri.parse("fumet://add-transaction?type=expense&category=$topCat1Name")
                 )
                 setOnClickPendingIntent(R.id.btn_top_cat_1, topCat1Intent)
 
@@ -55,14 +55,14 @@ class SafeToSpendWidgetProvider : HomeWidgetProvider() {
                 val topCat2Intent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("fintrack://add-transaction?type=expense&category=$topCat2Name")
+                    Uri.parse("fumet://add-transaction?type=expense&category=$topCat2Name")
                 )
                 setOnClickPendingIntent(R.id.btn_top_cat_2, topCat2Intent)
 
                 // Fixed Coffee background log button (does not open the app)
                 val coffeeIntent = HomeWidgetBackgroundIntent.getBroadcast(
                     context,
-                    Uri.parse("fintrack://add_expense?amount=80&category=food&note=Coffee")
+                    Uri.parse("fumet://add_expense?amount=80&category=food&note=Coffee")
                 )
                 setOnClickPendingIntent(R.id.btn_coffee, coffeeIntent)
 
@@ -70,7 +70,7 @@ class SafeToSpendWidgetProvider : HomeWidgetProvider() {
                 val launchIntent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("fintrack://add-transaction?type=expense")
+                    Uri.parse("fumet://add-transaction?type=expense")
                 )
                 setOnClickPendingIntent(R.id.btn_add_custom, launchIntent)
             }

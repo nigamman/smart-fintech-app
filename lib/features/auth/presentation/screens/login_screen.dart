@@ -8,6 +8,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/auth_controller.dart';
 import '../widgets/premium_widgets.dart';
+import '../../../../commons/widgets/fumet_snack_bar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -47,15 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.listen(authControllerProvider, (_, state) {
       state.whenOrNull(
         error: (error, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                error.toString(),
-                style: GoogleFonts.plusJakartaSans(color: Colors.white),
-              ),
-              backgroundColor: AppColors.expense,
-            ),
-          );
+          FumetSnackBar.showError(context, error);
         },
       );
     });
@@ -80,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // Logo (Animated breathing + entrance fader)
                   const FadeInSlideUp(
                     delayMs: 0,
-                    child: FinTrackLogo(),
+                    child: FumetLogo(),
                   ),
 
                   const SizedBox(height: 32),
@@ -127,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: PremiumTextField(
                       controller: _emailController,
                       label: 'Email',
-                      hintText: 'rishi@fintrack.app',
+                      hintText: 'ram@fumet.app',
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -244,66 +237,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // Social Buttons (Entrance fader)
                   FadeInSlideUp(
                     delayMs: 450,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: BouncingButton(
-                            text: '',
-                            backgroundColor: Colors.transparent,
-                            onPressed: () {
-                              // Google Login Action
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/icons/google_icon.png',
-                                  width: 20,
-                                  height: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Google',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primaryText,
-                                  ),
-                                ),
-                              ],
+                    child: BouncingButton(
+                      text: '',
+                      backgroundColor: Colors.transparent,
+                      onPressed: () {
+                        ref.read(authControllerProvider.notifier).loginWithGoogle();
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/icons/google_icon.png',
+                            width: 20,
+                            height: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Google',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryText,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: BouncingButton(
-                            text: '',
-                            backgroundColor: Colors.transparent,
-                            onPressed: () {
-                              // Facebook Login Action
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/icons/facebook_icon.png',
-                                  width: 20,
-                                  height: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Facebook',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primaryText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
 
@@ -316,7 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'New to FinTrack? ',
+                          'New to Fumet? ',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,

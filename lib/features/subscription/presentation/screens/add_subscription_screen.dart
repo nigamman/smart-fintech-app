@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/utils/thousands_formatter.dart';
+import '../../../../core/extensions/num_extensions.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../commons/widgets/bouncy_button.dart';
@@ -45,7 +47,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
       setState(() {}); // refresh letter chip dynamically
     });
     _amountController = TextEditingController(
-      text: sub != null ? sub.amount.toStringAsFixed(0) : '',
+      text: sub != null ? sub.amount.toCommaFormat() : '',
     );
     _selectedCycle = sub?.billingCycle ?? BillingCycle.monthly;
     _startDate = sub?.createdAt ?? DateTime.now();
@@ -130,7 +132,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final costVal = double.tryParse(_amountController.text);
+    final costVal = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (costVal == null || costVal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid cost.')),
@@ -308,6 +310,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                       child: TextFormField(
                         controller: _amountController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [ThousandsFormatter()],
                         textAlign: TextAlign.left,
                         cursorColor: AppColors.primary, // Custom gold cursor
                         cursorWidth: 2.0,
@@ -319,7 +322,8 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Cost amount is required';
-                          if (double.tryParse(val) == null || double.parse(val) <= 0) {
+                          final cleanVal = val.replaceAll(',', '');
+                          if (double.tryParse(cleanVal) == null || double.parse(cleanVal) <= 0) {
                             return 'Enter a valid cost';
                           }
                           return null;

@@ -4,8 +4,8 @@ import '../core/theme/app_theme.dart';
 import '../features/settings/presentation/providers/settings_providers.dart';
 import 'app_router.dart';
 
-class FinTrackApp extends ConsumerWidget {
-  const FinTrackApp({super.key});
+class FumetApp extends ConsumerWidget {
+  const FumetApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -14,10 +14,10 @@ class FinTrackApp extends ConsumerWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'FinTrack',
-      theme: AppTheme.lightTheme,
+      title: 'Fumet',
+      theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: preferences.themeMode,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
     );
   }

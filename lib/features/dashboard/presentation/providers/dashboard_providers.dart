@@ -46,12 +46,15 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
       totalExpense: 0.0,
       totalBalance: 0.0,
       safeToSpend: 0.0,
+      monthlyExpense: 0.0,
       recentTransactions: [],
     );
   }
 
   double totalIncome = 0;
   double totalExpense = 0;
+  double monthlyExpense = 0;
+  final now = DateTime.now();
 
   for (final transaction in transactions) {
     if (transaction.isEncrypted) continue;
@@ -65,16 +68,23 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
         expenseAmount -= (transaction.amount * (share / 100));
       }
       totalExpense += expenseAmount;
+
+      // Calculate current month's expenses only
+      final txDate = transaction.transactionDate;
+      if (txDate.year == now.year && txDate.month == now.month) {
+        monthlyExpense += expenseAmount;
+      }
     }
   }
 
   final totalBalance = totalIncome - totalExpense;
 
-  final now = DateTime.now();
   final lastDay = DateTime(now.year, now.month + 1, 0).day;
   final remainingDays = (lastDay - now.day) + 1;
+  final daysDivider = remainingDays < 1 ? 1 : remainingDays;
 
-  final safeToSpend = (user.monthlyIncome - totalExpense) / remainingDays;
+  // Safe to Spend = (Monthly Income - Monthly Savings Goal - Monthly Expenses) / Remaining Days
+  final safeToSpend = (user.monthlyIncome - user.monthlySavingsGoal - monthlyExpense) / daysDivider;
 
   final data = DashboardData(
     userName: user.name,
@@ -84,6 +94,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
     totalExpense: totalExpense,
     totalBalance: totalBalance,
     safeToSpend: safeToSpend,
+    monthlyExpense: monthlyExpense,
     recentTransactions: transactions.take(5).cast<TransactionModel>().toList(),
   );
   

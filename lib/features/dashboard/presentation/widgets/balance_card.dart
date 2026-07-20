@@ -14,6 +14,8 @@ class BalanceCard extends ConsumerStatefulWidget {
   final double totalBalance;
   final double monthlyIncome;
   final double totalExpense;
+  final double monthlyExpense;
+  final double monthlySavingsGoal;
   final int healthScore;
 
   const BalanceCard({
@@ -22,6 +24,8 @@ class BalanceCard extends ConsumerStatefulWidget {
     required this.totalBalance,
     required this.monthlyIncome,
     required this.totalExpense,
+    required this.monthlyExpense,
+    required this.monthlySavingsGoal,
     this.healthScore = 100,
   });
 
@@ -96,11 +100,11 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(12),
+                   color: AppColors.border,
+                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '(Monthly Income - Monthly Expenses)\n÷\nRemaining Days in Month',
+                  '(Monthly Income - Savings Goal - Monthly Expenses)\n÷\nRemaining Days in Month',
                   style: AppTextStyles.body.copyWith(
                     fontWeight: FontWeight.bold,
                     height: 1.5,
@@ -116,9 +120,11 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
               const SizedBox(height: 10),
               _buildCalcRow('Monthly Income:', '$currency${widget.monthlyIncome.toStringAsFixed(0)}'),
               const SizedBox(height: 6),
-              _buildCalcRow('Monthly Expenses:', '- $currency${widget.totalExpense.toStringAsFixed(0)}', isNegative: true),
+              _buildCalcRow('Monthly Savings Goal:', '- $currency${widget.monthlySavingsGoal.toStringAsFixed(0)}', isNegative: true),
+              const SizedBox(height: 6),
+              _buildCalcRow('Monthly Expenses:', '- $currency${widget.monthlyExpense.toStringAsFixed(0)}', isNegative: true),
               const Divider(height: 16, color: AppColors.border),
-              _buildCalcRow('Remaining Budget:', '$currency${(widget.monthlyIncome - widget.totalExpense).toStringAsFixed(0)}', isBold: true),
+              _buildCalcRow('Remaining Budget:', '$currency${(widget.monthlyIncome - widget.monthlySavingsGoal - widget.monthlyExpense).toStringAsFixed(0)}', isBold: true),
               const SizedBox(height: 6),
               _buildCalcRow('Remaining Days:', '$remainingDays days left'),
               const Divider(height: 16, color: AppColors.border),
@@ -201,151 +207,164 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
           painter: LedgerBackgroundPainter(
             lineColor: AppColors.border.withOpacity(0.35),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: AnimatedBuilder(
-              animation: _arcProgressAnimation,
-              builder: (context, child) {
-                // Calculate display safe to spend based on active animated factor
-                final currentProgress = _arcProgressAnimation.value;
-                final displaySafeToSpend = widget.safeToSpend > 0
-                    ? (widget.safeToSpend * (currentProgress / _targetPct))
-                    : 0.0;
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: AnimatedBuilder(
+                  animation: _arcProgressAnimation,
+                  builder: (context, child) {
+                    // Calculate display safe to spend based on active animated factor
+                    final currentProgress = _arcProgressAnimation.value;
+                    final displaySafeToSpend = widget.safeToSpend > 0
+                        ? (widget.safeToSpend * (currentProgress / _targetPct))
+                        : 0.0;
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Arc Gauge CustomPaint with Animated Value
-                    SizedBox(
-                      width: 220,
-                      height: 110,
-                      child: CustomPaint(
-                        painter: SafeToSpendArcPainter(
-                          progressPct: currentProgress,
-                          activeColor: AppColors.primary,
-                          isDark: isDark,
-                        ),
-                      ),
-                    ),
-                    
-                    Text(
-                      'SAFE TO SPEND TODAY',
-                      style: AppTextStyles.label.copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Large Serif Amount (Fraunces)
-                    Text(
-                      '$currency${displaySafeToSpend.toStringAsFixed(0)}',
-                      style: GoogleFonts.fraunces(
-                        fontSize: 38,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryText,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Subtitle: Health Score • On Pace
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'Health score ${widget.healthScore}',
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        // Arc Gauge CustomPaint with Animated Value
+                        SizedBox(
+                          width: 220,
+                          height: 110,
+                          child: CustomPaint(
+                            painter: SafeToSpendArcPainter(
+                              progressPct: currentProgress,
+                              activeColor: AppColors.primary,
+                              isDark: isDark,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.circle, size: 4, color: AppColors.secondaryText),
-                        const SizedBox(width: 6),
+                        
                         Text(
-                          widget.safeToSpend > 0 ? 'on pace' : 'budget deficit',
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 12,
-                            color: widget.safeToSpend > 0 ? AppColors.income : AppColors.expense,
+                          'SAFE TO SPEND TODAY',
+                          style: AppTextStyles.label.copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Large Serif Amount (Fraunces)
+                        Text(
+                          '$currency${displaySafeToSpend.toStringAsFixed(0)}',
+                          style: GoogleFonts.fraunces(
+                            fontSize: 38,
                             fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Bottom columns divider
-                    Container(
-                      height: 0.5,
-                      color: AppColors.border,
-                    ),
-                    const SizedBox(height: 16),
+                        const SizedBox(height: 6),
 
-                    // Bottom cash details (Tabulated Mono numbers)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'CASH BALANCE',
-                                style: AppTextStyles.label.copyWith(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                  color: AppColors.disabledText,
-                                ),
+                        // Subtitle: Health Score • On Pace
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Health score ${widget.healthScore}',
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$currency${widget.totalBalance.toStringAsFixed(0)}',
-                                style: AppTextStyles.mono.copyWith(
-                                  fontSize: 15,
-                                ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.circle, size: 4, color: AppColors.secondaryText),
+                            const SizedBox(width: 6),
+                            Text(
+                              widget.safeToSpend > 0 ? 'on pace' : 'budget deficit',
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 12,
+                                color: widget.safeToSpend > 0 ? AppColors.income : AppColors.expense,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 24),
+                        
+                        // Bottom columns divider
                         Container(
-                          width: 0.5,
-                          height: 32,
+                          height: 0.5,
                           color: AppColors.border,
                         ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'THIS MONTH',
-                                style: AppTextStyles.label.copyWith(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                  color: AppColors.disabledText,
-                                ),
+                        const SizedBox(height: 16),
+
+                        // Bottom cash details (Tabulated Mono numbers)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'CASH BALANCE',
+                                    style: AppTextStyles.label.copyWith(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.2,
+                                      color: AppColors.disabledText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$currency${widget.totalBalance.toStringAsFixed(0)}',
+                                    style: AppTextStyles.mono.copyWith(
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                formattedNet,
-                                style: AppTextStyles.mono.copyWith(
-                                  fontSize: 15,
-                                  color: netSavings >= 0 ? AppColors.income : AppColors.expense,
-                                ),
+                            ),
+                            Container(
+                              width: 0.5,
+                              height: 32,
+                              color: AppColors.border,
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'THIS MONTH',
+                                    style: AppTextStyles.label.copyWith(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.2,
+                                      color: AppColors.disabledText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    formattedNet,
+                                    style: AppTextStyles.mono.copyWith(
+                                      fontSize: 15,
+                                      color: netSavings >= 0 ? AppColors.income : AppColors.expense,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                top: 20,
+                right: 20,
+                child: Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: AppColors.secondaryText.withOpacity(0.5),
+                ),
+              ),
+            ],
           ),
         ),
       ),

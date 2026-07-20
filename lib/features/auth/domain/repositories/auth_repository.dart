@@ -24,6 +24,9 @@ abstract class AuthRepository {
     required String password,
   });
 
+  /// Login with Google provider.
+  Future<AppUser> loginWithGoogle();
+
   /// Send password reset email.
   Future<void> forgotPassword({
     required String email,

@@ -28,29 +28,31 @@ class GreetingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+    final initials = userName.trim().isNotEmpty
+        ? (userName.trim().split(' ').length >= 2
+            ? '${userName.trim().split(' ')[0][0]}${userName.trim().split(' ')[1][0]}'
+            : userName.trim().split(' ')[0][0])
+        : 'U';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // FT square badge
+        // Gold App logo badge
         Container(
-          width: 40,
-          height: 40,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: AppColors.primary,
-              width: 1.5,
+              width: 1.0,
             ),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            'FT',
-            style: AppTextStyles.label.copyWith(
-              fontWeight: FontWeight.w900,
-              color: AppColors.primary,
-              letterSpacing: 0.5,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: Image.asset(
+              'assets/icons/icon-master-1024.png',
+              fit: BoxFit.cover,
             ),
           ),
         ),
@@ -88,21 +90,22 @@ class GreetingHeader extends StatelessWidget {
         BouncyButton(
           onTap: () => context.push('/settings'),
           child: Container(
-            width: 40,
-            height: 40,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.secondaryText.withOpacity(0.3),
+                color: AppColors.primary,
                 width: 1.0,
               ),
             ),
             alignment: Alignment.center,
             child: Text(
-              initial,
-              style: AppTextStyles.body.copyWith(
-                fontWeight: FontWeight.w900,
-                color: AppColors.primaryText,
+              initials.toUpperCase(),
+              style: AppTextStyles.label.copyWith(
+                color: AppColors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),

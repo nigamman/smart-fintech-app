@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/presentation/widgets/premium_widgets.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -20,18 +21,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   final PageController _pageController = PageController();
   int _currentPage = 0;
   late AnimationController _fadeController;
-  late AnimationController _floatController;
-  static const int _totalPages = 5;
+  late AnimationController _logoPulseController;
+  static const int _totalPages = 7;
 
   @override
   void initState() {
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 600),
     )..forward();
 
-    _floatController = AnimationController(
+    _logoPulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
@@ -41,7 +42,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   void dispose() {
     _pageController.dispose();
     _fadeController.dispose();
-    _floatController.dispose();
+    _logoPulseController.dispose();
     super.dispose();
   }
 
@@ -63,11 +64,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF020617) : const Color(0xFFF8FAFC);
-
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -77,21 +75,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'FinTrack',
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.accent,
-                      letterSpacing: 0.5,
-                    ),
+                  Row(
+                    children: [
+                      // Little app icon
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: AppColors.primary, width: 1.0),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.asset(
+                            'assets/icons/icon-master-1024.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Fumet',
+                        style: GoogleFonts.fraunces(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
                   ),
                   TextButton(
                     onPressed: _completeOnboarding,
                     child: Text(
                       'Skip',
-                      style: AppTextStyles.body.copyWith(
-                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.disabledText,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -107,34 +125,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                 onPageChanged: _onPageChanged,
                 children: [
                   _buildPage(
-                    title: 'Can I Spend Today?',
+                    title: 'your money met,\n— on fumet.',
                     description:
-                        'No more mental math. We tell you exactly how much money is safe to spend today without worrying about bills or savings goals.',
-                    illustration: _SafeToSpendIllustration(floatAnimation: _floatController),
+                        'Welcome to Fumet, the zero-knowledge private ledger. Ownership of your data, budgets, and savings is absolute.',
+                    illustration: _LogoWelcomeIllustration(pulseAnimation: _logoPulseController),
                   ),
                   _buildPage(
-                    title: 'Unified Planning',
+                    title: 'Zero-Knowledge Security',
                     description:
-                        'Consolidate monthly budgets and track target savings goals directly within a single unified control center.',
-                    illustration: const _PlanningIllustration(),
+                        'Lock down your financials. Enable the Privacy Shield with a 6-digit Sync PIN to secure your cloud database with device-side encryption.',
+                    illustration: _PrivacyShieldIllustration(pulseAnimation: _logoPulseController),
                   ),
                   _buildPage(
-                    title: 'Bill & Subscription Reminders',
+                    title: 'Home Screen Widgets',
                     description:
-                        'Never get surprised by auto-renewals. Track recurring subscriptions like Netflix or utility bills, and get notified before they hit.',
-                    illustration: const _SubscriptionIllustration(),
+                        'Access budgets instantly. Track your Safe-to-Spend limit and log frequent transactions (like Coffee) directly from your Android Home Screen widgets.',
+                    illustration: _HomeWidgetIllustration(pulseAnimation: _logoPulseController),
                   ),
                   _buildPage(
-                    title: 'Predictive Velocity Analytics',
+                    title: 'Safe to Spend Today',
                     description:
-                        'Get ahead with financial predictions. Track daily spend speed and know exactly how many days your budget will last.',
-                    illustration: const _PredictionsIllustration(),
+                        'No more mental math. Fumet tells you exactly how much is safe to spend today without breaking your budgets or savings goals.',
+                    illustration: _SafeToSpendIllustration(pulseAnimation: _logoPulseController),
                   ),
                   _buildPage(
-                    title: 'Professional Statements',
+                    title: 'Friends Split Ledger',
                     description:
-                        'Generate and export official PDF or CSV statements formatted with personalized metadata details to share instantly.',
-                    illustration: _ExportIllustration(floatAnimation: _floatController),
+                        'Split bills and log expenses with friends. Check outstanding friends balances and settle up instantly with settled markers.',
+                    illustration: _SplitLedgerIllustration(pulseAnimation: _logoPulseController),
+                  ),
+                  _buildPage(
+                    title: 'Subscription Reminders',
+                    description:
+                        'Never get surprised by auto-renewals. Monitor recurring subscriptions and get alerts before bills deduct from your account.',
+                    illustration: _SubscriptionsIllustration(pulseAnimation: _logoPulseController),
+                  ),
+                  _buildPage(
+                    title: 'Premium PDF Statements',
+                    description:
+                        'Export clean financial logs. Generate and download beautifully formatted official PDF or CSV statements to share instantly.',
+                    illustration: _StatementExportIllustration(pulseAnimation: _logoPulseController),
                   ),
                 ],
               ),
@@ -165,16 +195,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: isDark ? const Color(0xFF020617) : Colors.white,
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.primaryDark,
                         shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.large,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         elevation: 0,
                       ),
                       child: Text(
                         _currentPage == _totalPages - 1 ? 'Get Started' : 'Next',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -209,18 +239,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             const SizedBox(height: 20),
             Text(
               title,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.fraunces(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
+                color: AppColors.primaryText,
+                height: 1.2,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
               description,
-              style: AppTextStyles.bodySecondary.copyWith(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
+                color: AppColors.secondaryText,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -240,410 +272,185 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       height: 6,
       width: isSelected ? 24 : 6,
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.accent : const Color(0xFF94A3B8).withValues(alpha: 0.4),
+        color: isSelected ? AppColors.primary : AppColors.border,
         borderRadius: BorderRadius.circular(3),
       ),
     );
   }
 }
 
-/// ILLUSTRATIONS FOR INTRO SLIDES
+// PREMIUM ILLUSTRATIONS
 
-class _SafeToSpendIllustration extends StatelessWidget {
-  final Animation<double> floatAnimation;
-  const _SafeToSpendIllustration({required this.floatAnimation});
+class _LogoWelcomeIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _LogoWelcomeIllustration({required this.pulseAnimation});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const emeraldColor = Color(0xFF10B981);
-    const emeraldAccentColor = Color(0xFF34D399);
-
-    return AnimatedBuilder(
-      animation: floatAnimation,
-      builder: (context, child) {
-        final double translation = floatAnimation.value * 12.0 - 6.0;
-        return Transform.translate(
-          offset: Offset(0, translation),
-          child: Container(
-            width: 260,
-            height: 160,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  emeraldColor.withValues(alpha: 0.15),
-                  Colors.teal.withValues(alpha: 0.05),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: emeraldColor.withValues(alpha: 0.35),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: emeraldColor.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                )
-              ],
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: emeraldColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Safe Limit',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          color: emeraldAccentColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.check_circle_outline_rounded, color: emeraldColor, size: 24),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Rs. 1,450',
-                      style: GoogleFonts.outfit(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Available to spend today',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.95, end: 1.05).animate(
+        CurvedAnimation(parent: pulseAnimation, curve: Curves.easeInOutSine),
+      ),
+      child: Container(
+        width: 140,
+        height: 140,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: AppColors.primary, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.18),
+              blurRadius: 40,
+              spreadRadius: 2,
+            )
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: Image.asset(
+            'assets/icons/icon-master-1024.png',
+            fit: BoxFit.cover,
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _PlanningIllustration extends StatefulWidget {
-  const _PlanningIllustration();
-
-  @override
-  State<_PlanningIllustration> createState() => _PlanningIllustrationState();
-}
-
-class _PlanningIllustrationState extends State<_PlanningIllustration> with SingleTickerProviderStateMixin {
-  late AnimationController _progressController;
-
-  @override
-  void initState() {
-    super.initState();
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _progressController.dispose();
-    super.dispose();
-  }
+class _PrivacyShieldIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _PrivacyShieldIllustration({required this.pulseAnimation});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Stack(
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.97, end: 1.03).animate(
+        CurvedAnimation(parent: pulseAnimation, curve: Curves.easeInOutSine),
+      ),
+      child: Container(
+        width: 200,
+        height: 140,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border, width: 1.0),
+        ),
         alignment: Alignment.center,
-        children: [
-          // Background Budget Box
-          Transform.translate(
-            offset: const Offset(-20, -20),
-            child: Opacity(
-              opacity: 0.8,
-              child: Container(
-                width: 180,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Budgets', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    AnimatedBuilder(
-                      animation: _progressController,
-                      builder: (context, child) {
-                        return LinearProgressIndicator(
-                          value: _progressController.value * 0.65,
-                          color: Colors.blueAccent,
-                          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                    Text('65% Consumed', style: GoogleFonts.outfit(fontSize: 8, color: Colors.blueAccent)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Foreground Goal Box
-          Transform.translate(
-            offset: const Offset(20, 20),
-            child: Container(
-              width: 180,
-              height: 100,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blueAccent.withValues(alpha: 0.06),
-                    blurRadius: 16,
-                  )
-                ],
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Savings Target', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold)),
-                      const Icon(Icons.stars, color: Colors.amber, size: 14),
-                    ],
-                  ),
-                  const Spacer(),
-                  AnimatedBuilder(
-                    animation: _progressController,
-                    builder: (context, child) {
-                      final pct = (_progressController.value * 85).toStringAsFixed(0);
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('$pct% Complete', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('Car Goal', style: GoogleFonts.outfit(fontSize: 8, color: Colors.grey)),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SubscriptionIllustration extends StatefulWidget {
-  const _SubscriptionIllustration();
-
-  @override
-  State<_SubscriptionIllustration> createState() => _SubscriptionIllustrationState();
-}
-
-class _SubscriptionIllustrationState extends State<_SubscriptionIllustration> with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: AnimatedBuilder(
-        animation: _pulseController,
-        builder: (context, child) {
-          final scale = 1.0 + (_pulseController.value * 0.04);
-          return Transform.scale(
-            scale: scale,
-            child: Container(
-              width: 220,
-              height: 130,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF131B2E) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.redAccent.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.redAccent.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                  )
-                ],
-              ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 14,
-                            backgroundColor: Colors.red,
-                            child: Icon(Icons.play_arrow, color: Colors.white, size: 14),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Netflix Premium',
-                            style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Rs. 649',
-                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.redAccent),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  Row(
-                    children: [
-                      const Icon(Icons.alarm, color: Colors.redAccent, size: 16),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Renews in 2 Days',
-                          style: GoogleFonts.outfit(fontSize: 10, color: Colors.redAccent, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(0.1),
+                border: Border.all(color: AppColors.primary, width: 1.0),
+              ),
+              child: const Icon(
+                Icons.security_rounded,
+                color: AppColors.primary,
+                size: 40,
               ),
             ),
-          );
-        },
+            const SizedBox(height: 12),
+            Text(
+              'Zero-Knowledge Sync',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppColors.primaryText,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _PredictionsIllustration extends StatefulWidget {
-  const _PredictionsIllustration();
-
-  @override
-  State<_PredictionsIllustration> createState() => _PredictionsIllustrationState();
-}
-
-class _PredictionsIllustrationState extends State<_PredictionsIllustration> with SingleTickerProviderStateMixin {
-  late AnimationController _lineController;
-
-  @override
-  void initState() {
-    super.initState();
-    _lineController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _lineController.dispose();
-    super.dispose();
-  }
+class _HomeWidgetIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _HomeWidgetIllustration({required this.pulseAnimation});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 240,
-      height: 150,
+      width: 210,
+      height: 140,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF131B2E) : Colors.white,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.primary, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.08),
+            blurRadius: 16,
+          )
+        ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Daily Spend Velocity', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold)),
+              Text(
+                'Fumet Widget',
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppColors.secondaryText,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary,
                 ),
-                child: Text(
-                  'Predictions',
-                  style: GoogleFonts.outfit(fontSize: 8, color: Colors.purpleAccent, fontWeight: FontWeight.bold),
-                ),
+                child: const Icon(Icons.add, color: AppColors.background, size: 12),
               ),
             ],
           ),
-          const Spacer(),
-          SizedBox(
-            height: 60,
-            child: AnimatedBuilder(
-              animation: _lineController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: _LineChartPainter(_lineController.value),
-                  size: const Size(200, 60),
-                );
-              },
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'Remaining budget will last approx. 18 days',
-            style: GoogleFonts.outfit(fontSize: 9, color: Colors.purpleAccent, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  '☕ Coffee',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.primaryText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  '🍔 Food',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.primaryText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -651,119 +458,236 @@ class _PredictionsIllustrationState extends State<_PredictionsIllustration> with
   }
 }
 
-class _LineChartPainter extends CustomPainter {
-  final double progress;
-  _LineChartPainter(this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.purpleAccent
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    path.moveTo(0, size.height * 0.8);
-    path.cubicTo(
-      size.width * 0.25,
-      size.height * 0.2,
-      size.width * 0.5,
-      size.height * 0.9,
-      size.width * 0.75,
-      size.height * 0.3,
-    );
-    path.lineTo(size.width, size.height * 0.1);
-
-    final pms = path.computeMetrics().first;
-    final extract = pms.extractPath(0, pms.length * progress);
-
-    canvas.drawPath(extract, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LineChartPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
-
-class _ExportIllustration extends StatelessWidget {
-  final Animation<double> floatAnimation;
-  const _ExportIllustration({required this.floatAnimation});
+class _SafeToSpendIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _SafeToSpendIllustration({required this.pulseAnimation});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return AnimatedBuilder(
-      animation: floatAnimation,
-      builder: (context, child) {
-        final double translation = floatAnimation.value * -8.0 + 4.0;
-        return Transform.translate(
-          offset: Offset(0, translation),
-          child: Container(
-            width: 230,
-            height: 140,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF131B2E) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.blueAccent.withValues(alpha: 0.3),
-                width: 1.5,
+    return Container(
+      width: 200,
+      height: 140,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border, width: 1.0),
+      ),
+      alignment: Alignment.center,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 90,
+            height: 90,
+            child: CircularProgressIndicator(
+              value: 0.72,
+              strokeWidth: 6,
+              color: AppColors.primary,
+              backgroundColor: AppColors.border,
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '₹1,240',
+                style: GoogleFonts.fraunces(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blueAccent.withValues(alpha: 0.05),
-                  blurRadius: 16,
+              Text(
+                'safe limit',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 9,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _SplitLedgerIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _SplitLedgerIllustration({required this.pulseAnimation});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 220,
+      height: 140,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border, width: 1.0),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: AppColors.income.withOpacity(0.15),
+                child: Text('R', style: GoogleFonts.fraunces(color: AppColors.income, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              Text('Ram', style: GoogleFonts.plusJakartaSans(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+              const Spacer(),
+              Text('+₹450', style: GoogleFonts.plusJakartaSans(color: AppColors.income, fontWeight: FontWeight.bold, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: AppColors.expense.withOpacity(0.15),
+                child: Text('S', style: GoogleFonts.fraunces(color: AppColors.expense, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              Text('Shyam', style: GoogleFonts.plusJakartaSans(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+              const Spacer(),
+              Text('-₹200', style: GoogleFonts.plusJakartaSans(color: AppColors.expense, fontWeight: FontWeight.bold, fontSize: 13)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubscriptionsIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _SubscriptionsIllustration({required this.pulseAnimation});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 200,
+      height: 140,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border, width: 1.0),
+      ),
+      padding: const EdgeInsets.all(16),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.repeat_rounded, color: AppColors.primary, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Netflix',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.primaryText,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Renews in 3 days',
+            style: GoogleFonts.plusJakartaSans(
+              color: AppColors.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatementExportIllustration extends StatelessWidget {
+  final AnimationController pulseAnimation;
+  const _StatementExportIllustration({required this.pulseAnimation});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.98, end: 1.02).animate(
+        CurvedAnimation(parent: pulseAnimation, curve: Curves.easeInOutSine),
+      ),
+      child: Container(
+        width: 190,
+        height: 140,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border, width: 1.2),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Icon(Icons.picture_as_pdf_rounded, color: AppColors.expense, size: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.primary, width: 0.8),
+                  ),
+                  child: Text(
+                    'EXPORT',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppColors.primary,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 )
               ],
             ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Spacer(),
+            Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.picture_as_pdf, color: Colors.blueAccent, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Account Statement',
-                          style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const Icon(Icons.cloud_done, color: Colors.blueAccent, size: 16),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(height: 6, color: AppColors.border, width: 100),
+                      const SizedBox(height: 6),
+                      Container(height: 4, color: AppColors.border.withOpacity(0.5), width: 60),
+                    ],
+                  ),
                 ),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Name: John Doe\nEmail: john@doe.com',
-                      style: GoogleFonts.outfit(fontSize: 8, color: Colors.grey),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blueAccent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'PDF Exporter',
-                        style: GoogleFonts.outfit(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
+                const Icon(Icons.check_circle_rounded, color: AppColors.income, size: 18),
               ],
-            ),
-          ),
-        );
-      },
+            )
+          ],
+        ),
+      ),
     );
   }
 }

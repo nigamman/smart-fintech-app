@@ -9,6 +9,8 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/profile_providers.dart';
+import '../../../../core/utils/thousands_formatter.dart';
+import '../../../../core/extensions/num_extensions.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -37,7 +39,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _submitProfile(dynamic user) async {
     if (!_formKey.currentState!.validate()) return;
 
-    final incomeVal = double.tryParse(_incomeController.text);
+    final incomeVal = double.tryParse(_incomeController.text.replaceAll(',', ''));
     if (incomeVal == null || incomeVal < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid positive monthly income.')),
@@ -45,7 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
-    final savingsVal = double.tryParse(_savingsGoalController.text);
+    final savingsVal = double.tryParse(_savingsGoalController.text.replaceAll(',', ''));
     if (savingsVal == null || savingsVal < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid positive savings goal.')),
@@ -105,8 +107,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (!_initialized) {
             _emailController.text = user.email;
             _nameController.text = user.name;
-            _incomeController.text = user.monthlyIncome.toStringAsFixed(0);
-            _savingsGoalController.text = user.monthlySavingsGoal.toStringAsFixed(0);
+            _incomeController.text = user.monthlyIncome.toCommaFormat();
+            _savingsGoalController.text = user.monthlySavingsGoal.toCommaFormat();
             _initialized = true;
           }
 
@@ -156,10 +158,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   controller: _incomeController,
                   label: 'e.g. 50000',
                   keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsFormatter()],
                   prefixIcon: const Icon(Icons.currency_rupee_rounded),
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Monthly income is required';
-                    if (double.tryParse(val) == null || double.parse(val) < 0) {
+                    final cleanVal = val.replaceAll(',', '');
+                    if (double.tryParse(cleanVal) == null || double.parse(cleanVal) < 0) {
                       return 'Enter a valid non-negative amount';
                     }
                     return null;
@@ -177,10 +181,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   controller: _savingsGoalController,
                   label: 'e.g. 10000',
                   keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsFormatter()],
                   prefixIcon: const Icon(Icons.savings_outlined),
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Monthly target is required';
-                    if (double.tryParse(val) == null || double.parse(val) < 0) {
+                    final cleanVal = val.replaceAll(',', '');
+                    if (double.tryParse(cleanVal) == null || double.parse(cleanVal) < 0) {
                       return 'Enter a valid non-negative amount';
                     }
                     return null;

@@ -10,7 +10,7 @@ import '../../features/dashboard/domain/entities/dashboard_data.dart';
 
 @pragma('vm:entry-point')
 Future<void> interactiveCallback(Uri? uri) async {
-  if (uri != null && uri.scheme == 'fintrack' && uri.host == 'add_expense') {
+  if (uri != null && uri.scheme == 'fumet' && uri.host == 'add_expense') {
     final amountString = uri.queryParameters['amount'] ?? '0';
     final amount = double.tryParse(amountString) ?? 0.0;
     final category = uri.queryParameters['category'] ?? 'other';
@@ -91,6 +91,7 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
     if (!userSnap.exists) return;
     final userData = userSnap.data()!;
     final monthlyIncome = (userData['monthlyIncome'] as num).toDouble();
+    final monthlySavingsGoal = (userData['monthlySavingsGoal'] as num?)?.toDouble() ?? 0.0;
 
     final transactionsSnap = await FirebaseFirestore.instance
         .collection('users')
@@ -100,6 +101,8 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
 
     double totalIncome = 0;
     double totalExpense = 0;
+    double monthlyExpense = 0;
+    final now = DateTime.now();
     final categoryCounts = <String, int>{};
 
     for (final doc in transactionsSnap.docs) {
@@ -119,6 +122,15 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
         }
         totalExpense += expenseAmount;
         categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+
+        // Parse date for current month comparison
+        final dateStr = data['transactionDate'] as String?;
+        if (dateStr != null) {
+          final txDate = DateTime.tryParse(dateStr);
+          if (txDate != null && txDate.year == now.year && txDate.month == now.month) {
+            monthlyExpense += expenseAmount;
+          }
+        }
       }
     }
 
@@ -133,10 +145,10 @@ Future<void> _updateWidgetStatsFromBackground(String userId) async {
     final topCat2Label = _getCategoryLabel(topCat2Name);
 
     final totalBalance = totalIncome - totalExpense;
-    final now = DateTime.now();
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
     final remainingDays = (lastDay - now.day) + 1;
-    final safeToSpend = (monthlyIncome - totalExpense) / remainingDays;
+    final daysDivider = remainingDays < 1 ? 1 : remainingDays;
+    final safeToSpend = (monthlyIncome - monthlySavingsGoal - monthlyExpense) / daysDivider;
 
     // Read currency from Hive in background
     await Hive.initFlutter();

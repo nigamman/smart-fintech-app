@@ -13,6 +13,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../dashboard/presentation/screens/main_navigation_screen.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/transaction_providers.dart';
@@ -531,47 +532,17 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   }
 
   void _showUnlockDialog(BuildContext context) {
-    final controller = TextEditingController();
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+      ),
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Unlock Zero-Knowledge Sync'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Enter your private passphrase to decrypt and sync your transactions.'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Passphrase',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final passphrase = controller.text.trim();
-                if (passphrase.isNotEmpty) {
-                  ref.read(preferencesProvider.notifier).setPassphrase(passphrase);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sync unlocked successfully!')),
-                  );
-                }
-              },
-              child: const Text('Unlock'),
-            ),
-          ],
-        );
+        return const PinUnlockSheet();
       },
     );
   }

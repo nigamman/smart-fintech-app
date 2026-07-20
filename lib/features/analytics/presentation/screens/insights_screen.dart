@@ -16,6 +16,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../dashboard/presentation/screens/main_navigation_screen.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../providers/analytics_providers.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 
 class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});
@@ -93,6 +94,21 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> with SingleTick
 
     final analyticsAsync = ref.watch(analyticsDataProvider);
     final currency = ref.watch(preferencesProvider).currency;
+    final userAsync = ref.watch(userProfileStreamProvider);
+
+    final userInitials = userAsync.maybeWhen(
+      data: (profile) {
+        if (profile != null && profile.name.trim().isNotEmpty) {
+          final parts = profile.name.trim().split(' ');
+          if (parts.length >= 2) {
+            return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+          }
+          return parts[0][0].toUpperCase();
+        }
+        return 'U';
+      },
+      orElse: () => 'U',
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -128,29 +144,31 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> with SingleTick
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.transparent,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.primary, width: 1.0),
+                        // Gold App logo badge
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppColors.primary,
+                              width: 1.0,
                             ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'FT',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                                fontSize: 11,
-                              ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: Image.asset(
+                              'assets/icons/icon-master-1024.png',
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
-                        GestureDetector(
+
+                        // Profile avatar group
+                        BouncyButton(
                           onTap: () => context.push('/settings'),
                           child: CircleAvatar(
-                            radius: 18,
+                            radius: 16,
                             backgroundColor: Colors.transparent,
                             child: Container(
                               decoration: BoxDecoration(
@@ -159,11 +177,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> with SingleTick
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                'R',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                userInitials,
+                                style: AppTextStyles.label.copyWith(
                                   color: AppColors.primary,
                                   fontSize: 11,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),

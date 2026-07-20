@@ -12,7 +12,20 @@
           "package_name": "com.example.fintech_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "545085974690-583b5dcl5679r86sg0pt00ir59vkv8gg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fintech_app",
+            "certificate_hash": "553c863873a05bb2acbe5147ff189abc4a94a60c"
+          }
+        },
+        {
+          "client_id": "545085974690-30qmmg04gchtg274jsoepjssj6s8184s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBB7VGuf4BXIpc3Dx3ro7c0UVHOuieDumo"
@@ -20,7 +33,55 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "545085974690-30qmmg04gchtg274jsoepjssj6s8184s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "545085974690-o8aqc5g00fa7gjh2lmr55qhgfi3mdg05.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.fintechApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545085974690:android:5f637e19f036ed0ad28ffb",
+        "android_client_info": {
+          "package_name": "com.nigamman.fumet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "545085974690-30qmmg04gchtg274jsoepjssj6s8184s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBB7VGuf4BXIpc3Dx3ro7c0UVHOuieDumo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "545085974690-30qmmg04gchtg274jsoepjssj6s8184s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "545085974690-o8aqc5g00fa7gjh2lmr55qhgfi3mdg05.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.fintechApp"
+              }
+            }
+          ]
         }
       }
     }

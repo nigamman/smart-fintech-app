@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../../core/constants/firestore_collections.dart';
 import '../../../../core/errors/auth_exception.dart';
 import '../models/user_model.dart';
@@ -111,6 +112,73 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
 
     return UserModel.fromJson(snapshot.data()!);
+  }
+
+  @override
+  Future<UserModel> loginWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+      
+      // Initialize the GoogleSignIn instance lazily before authenticating
+      await googleSignIn.initialize(
+        serverClientId: '545085974690-30qmmg04gchtg274jsoepjssj6s8184s.apps.googleusercontent.com',
+      );
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.authenticate();
+      if (googleUser == null) {
+        throw const AuthException('Google sign in cancelled by user.');
+      }
+
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      // Access Token requires explicit scope authorization in v7.0.0+
+      final List<String> scopes = ['email', 'profile'];
+      final clientAuth = await googleUser.authorizationClient.authorizeScopes(scopes);
+      final String? accessToken = clientAuth?.accessToken;
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: accessToken,
+        idToken: idToken,
+      );
+
+      final UserCredential userCredential = await auth.signInWithCredential(credential);
+      final firebaseUser = userCredential.user;
+      if (firebaseUser == null) {
+        throw const AuthException('Firebase Auth sign in failed.');
+      }
+
+      final uid = firebaseUser.uid;
+      final snapshot = await firestore
+          .collection(FirestoreCollections.users)
+          .doc(uid)
+          .get();
+
+      if (snapshot.exists) {
+        return UserModel.fromJson(snapshot.data()!);
+      }
+
+      // First time Google Sign In - create profile
+      final newUser = UserModel(
+        id: uid,
+        name: firebaseUser.displayName ?? 'Google User',
+        email: firebaseUser.email ?? '',
+        monthlyIncome: 0.0,
+        monthlySavingsGoal: 0.0,
+        createdAt: DateTime.now().toUtc(),
+      );
+
+      await firestore
+          .collection(FirestoreCollections.users)
+          .doc(uid)
+          .set(newUser.toJson());
+
+      return newUser;
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(e.message ?? 'An error occurred during Google sign in.');
+    } catch (e) {
+      throw AuthException(e.toString());
+    }
   }
 
   @override

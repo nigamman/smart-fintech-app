@@ -12,6 +12,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../../core/services/export_service.dart';
@@ -328,26 +329,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildSelectedSettingsContent(dynamic user, dynamic preferences) {
     switch (_activeTabIndex) {
       case 0:
+        final hasEncrypted = ref.watch(transactionsStreamProvider).value?.any((tx) => tx.isEncrypted) ?? false;
         final hasPassphrase = preferences.isEncryptionEnabled && preferences.syncPassphrase != null;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Preferences section
-            _buildSectionHeader('Preferences'),
-            _buildSettingsCard(
-              child: Column(
-                children: [
-                  _SettingsTile(
-                    icon: Icons.dark_mode_outlined,
-                    title: 'Theme Mode',
-                    subtitle: preferences.themeMode.toString().split('.').last.toUpperCase(),
-                    onTap: () => _showThemePicker(context, ref),
-                  ),
-                ],
-              ),
-            ),
-            VSpace.lg,
-
             // Zero-Knowledge Sync section
             _buildSectionHeader('Zero-Knowledge Sync'),
             _buildSettingsCard(
@@ -365,7 +351,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       activeColor: const Color(0xFFC8A05B),
                       onChanged: (val) {
                         if (val) {
-                          _showSetupPassphraseDialog(context, user.id);
+                          if (preferences.isEncryptionEnabled || hasEncrypted) {
+                            _showPinUnlockSheet(context);
+                          } else {
+                            _showPinSetupSheet(context, user.id);
+                          }
                         } else {
                           _confirmDisableEncryption(context, user.id);
                         }
@@ -375,16 +365,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (hasPassphrase) {
                         _confirmDisableEncryption(context, user.id);
                       } else {
-                        _showSetupPassphraseDialog(context, user.id);
+                        if (preferences.isEncryptionEnabled || hasEncrypted) {
+                          _showPinUnlockSheet(context);
+                        } else {
+                          _showPinSetupSheet(context, user.id);
+                        }
                       }
                     },
                   ),
                   if (hasPassphrase)
                     _SettingsTile(
                       icon: Icons.key_rounded,
-                      title: 'Change Sync Passphrase',
-                      subtitle: 'Update your encryption passphrase',
-                      onTap: () => _showChangePassphraseDialog(context, user.id),
+                      title: 'Change Sync PIN',
+                      subtitle: 'Update your 6-digit passcode',
+                      onTap: () => _showPinChangeSheet(context, user.id),
                     ),
                 ],
               ),
@@ -472,7 +466,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.contact_support_outlined,
                     title: 'Contact Us',
-                    subtitle: 'support@fintrack.app',
+                    subtitle: 'nigamman20@gmail.com',
                     onTap: () => _showSupportEmail(context),
                   ),
                   _SettingsTile(
@@ -483,7 +477,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   _SettingsTile(
                     icon: Icons.star_outline_rounded,
-                    title: 'Rate FinTrack',
+                    title: 'Rate Fumet',
                     subtitle: 'Support us on App Store',
                     onTap: () => _handleRateApp(context),
                   ),
@@ -523,7 +517,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('App Version', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                        Text('1.0.0 (Build 1)', style: AppTextStyles.bodySecondary),
+                        Text('2.1.2 ', style: AppTextStyles.bodySecondary),
                       ],
                     ),
                     VSpace.md,
@@ -531,15 +525,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Developer', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                        Text('Deepmind Team', style: AppTextStyles.bodySecondary),
-                      ],
-                    ),
-                    VSpace.md,
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Changelog', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                        Text('v1.0.0 - MVP Release', style: AppTextStyles.bodySecondary),
+                        Text('nigamman', style: AppTextStyles.bodySecondary),
                       ],
                     ),
                   ],
@@ -569,6 +555,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // --- ACTIONS & DIALOGS ---
 
+  void _showPinUnlockSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+      ),
+      builder: (context) {
+        return const PinUnlockSheet();
+      },
+    );
+  }
+
+  void _showPinSetupSheet(BuildContext context, String userId) {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+      ),
+      builder: (context) {
+        return PinUnlockSheet(isSetup: true, userId: userId);
+      },
+    );
+  }
+
+  void _showPinChangeSheet(BuildContext context, String userId) {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+      ),
+      builder: (context) {
+        return PinUnlockSheet(isChange: true, userId: userId);
+      },
+    );
+  }
+
   void _showSetupPassphraseDialog(BuildContext context, String userId) {
     final controller = TextEditingController();
     final confirmController = TextEditingController();
@@ -577,6 +611,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: AppColors.surface,
           title: const Text('Setup Privacy Shield'),
           content: Form(
             key: formKey,
@@ -597,30 +632,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 TextFormField(
                   controller: controller,
                   obscureText: true,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
                   validator: (value) {
-                    if (value == null || value.trim().length < 6) {
-                      return 'Passphrase must be at least 6 characters';
+                    if (value == null || value.length != 6) {
+                      return 'PIN must be exactly 6 digits';
                     }
                     return null;
                   },
                   decoration: const InputDecoration(
-                    labelText: 'Sync Passphrase',
+                    labelText: 'Sync PIN',
                     border: OutlineInputBorder(),
-                    helperText: 'Min 6 characters',
+                    helperText: 'Exactly 6 digits',
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: confirmController,
                   obscureText: true,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
                   validator: (value) {
                     if (value != controller.text) {
-                      return 'Passphrases do not match';
+                      return 'PINs do not match';
                     }
                     return null;
                   },
                   decoration: const InputDecoration(
-                    labelText: 'Confirm Passphrase',
+                    labelText: 'Confirm PIN',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -694,6 +739,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: AppColors.surface,
           title: const Text('Change Sync Passphrase'),
           content: Form(
             key: formKey,
@@ -710,14 +756,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   TextFormField(
                     controller: currentController,
                     obscureText: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
                     validator: (value) {
                       if (value != correctCurrentPassphrase) {
-                        return 'Incorrect current passphrase';
+                        return 'Incorrect current PIN';
                       }
                       return null;
                     },
                     decoration: const InputDecoration(
-                      labelText: 'Current Passphrase',
+                      labelText: 'Current PIN',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -725,33 +776,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   TextFormField(
                     controller: newController,
                     obscureText: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
                     validator: (value) {
-                      if (value == null || value.trim().length < 6) {
-                        return 'New passphrase must be at least 6 characters';
+                      if (value == null || value.length != 6) {
+                        return 'New PIN must be exactly 6 digits';
                       }
                       if (value == currentController.text) {
-                        return 'New passphrase must be different';
+                        return 'New PIN must be different';
                       }
                       return null;
                     },
                     decoration: const InputDecoration(
-                      labelText: 'New Passphrase',
+                      labelText: 'New PIN',
                       border: OutlineInputBorder(),
-                      helperText: 'Min 6 characters',
+                      helperText: 'Exactly 6 digits',
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: confirmController,
                     obscureText: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
                     validator: (value) {
                       if (value != newController.text) {
-                        return 'Passphrases do not match';
+                        return 'PINs do not match';
                       }
                       return null;
                     },
                     decoration: const InputDecoration(
-                      labelText: 'Confirm New Passphrase',
+                      labelText: 'Confirm New PIN',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -905,7 +966,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: () async {
                 Navigator.pop(context);
                 try {
-                  await ref.read(authRepositoryProvider).logout();
+                  await ref.read(authControllerProvider.notifier).logout();
                 } catch (_) {}
               },
               child: const Text('Logout', style: TextStyle(color: AppColors.expense)),
@@ -1082,38 +1143,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showThemePicker(BuildContext context, WidgetRef ref) {
-    final current = ref.read(preferencesProvider).themeMode;
-    final options = ThemeMode.values;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return SimpleDialog(
-          title: const Text('Select Theme Mode'),
-          children: options.map((option) {
-            return SimpleDialogOption(
-              onPressed: () {
-                ref.read(preferencesProvider.notifier).updateThemeMode(option);
-                Navigator.pop(context);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(option.toString().split('.').last.toUpperCase(), style: AppTextStyles.body),
-                    if (option == current)
-                      const Icon(Icons.check_rounded, color: AppColors.primary),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
 
   void _showNotificationPlaceholder(BuildContext context) {
     showDialog(
@@ -1175,7 +1204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 final userAsync = ref.read(userProfileStreamProvider);
                 final user = userAsync.value;
                 final name = user?.name ?? 'User';
-                final email = user?.email ?? 'user@fintrack.app';
+                final email = user?.email ?? 'user@fumet.app';
                 await ExportService.exportTransactionsToPdf(txs, currency, name, email);
               } catch (e) {
                 messenger.showSnackBar(
@@ -1222,7 +1251,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Contact Support'),
-        content: const Text('Drop us a mail at support@fintrack.app for help, suggestions, and account services.'),
+        content: const Text('Drop us a mail at support@fumet.app for help, suggestions, and account services.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
@@ -1235,7 +1264,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Report Bug'),
-        content: const Text('To report bugs, mail logs & details directly to bug-reports@fintrack.app.'),
+        content: const Text('To report bugs, mail logs & details directly to bug-nigamman20@gmail.com.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
@@ -1245,7 +1274,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _handleRateApp(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Thank you for rating FinTrack App!')),
+      const SnackBar(content: Text('Thank you for rating Fumet App!')),
     );
   }
 
@@ -1262,8 +1291,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: const Text('Terms & Conditions'),
         content: const SingleChildScrollView(
           child: Text(
-            '1. Acceptance of Terms: By using FinTrack, you agree to these terms.\n\n'
-            '2. Financial Information: FinTrack provides tools for tracking budget, and not certified financial advisory reports.\n\n'
+            '1. Acceptance of Terms: By using Fumet, you agree to these terms.\n\n'
+            '2. Financial Information: Fumet provides tools for tracking budget, and not certified financial advisory reports.\n\n'
             '3. Data Storage: Your transactional and profile details are encrypted in Firestore.',
           ),
         ),
@@ -1281,8 +1310,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: const Text('Privacy Policy'),
         content: const SingleChildScrollView(
           child: Text(
-            'We value your privacy. FinTrack app does not collect personal identifiers or trade usage logs to third parties.\n\n'
-            'Local cash inputs remain on secure Google Firebase hosting servers.',
+            'At Fumet, we build private, zero-knowledge financial software. Your data ownership is absolute.\n\n'
+            '1. DATA OWNERSHIP & ZERO-KNOWLEDGE SYNC\n'
+            'When the Privacy Shield is enabled, your ledger entries are encrypted locally on your device with your 6-digit Sync PIN using AES-256 before synchronization. We do not have access to your encryption keys, and your cloud database backups are stored as ciphertext. We cannot read or access your financial logs.\n\n'
+            '2. AUTHENTICATION & PROFILE DATA\n'
+            'We store your name, email, and configured savings targets to manage authentication and user profiles. We do not collect other personal identifiers.\n\n'
+            '3. NO THIRD-PARTY SHARING\n'
+            'Fumet is ad-free and tracking-free. We do not trade, sell, or monitor your financial history or app usage logs.\n\n'
+            'For support, contact nigamman20@gmail.com.',
           ),
         ),
         actions: [
@@ -1348,7 +1383,7 @@ class _WidgetShowcaseCardState extends State<_WidgetShowcaseCard> with SingleTic
   int _currentPage = 0;
   late AnimationController _glowController;
 
-  static const _channel = MethodChannel('com.example.fintech_app/widgets');
+  static const _channel = MethodChannel('com.nigamman.fumet/widgets');
 
   Future<void> _requestPinWidget(String type) async {
     try {
