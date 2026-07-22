@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../commons/widgets/loading_indicator.dart';
 import '../../../../commons/widgets/primary_button.dart';
@@ -1307,15 +1309,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _handleRateApp(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Thank you for rating Fumet App!')),
-    );
+  Future<void> _handleRateApp(BuildContext context) async {
+    final Uri url = Uri.parse('https://play.google.com/store/apps/details?id=com.nigamman.fumet');
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch Google Play Store.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   void _handleShareApp(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('App share link copied to clipboard!')),
+    Share.share(
+      'Track your budgets, savings, and expenses with Fumet! Download the app now: https://play.google.com/store/apps/details?id=com.nigamman.fumet',
+      subject: 'Share Fumet App',
     );
   }
 
@@ -1338,28 +1354,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showPrivacyDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'At Fumet, we build private, zero-knowledge financial software. Your data ownership is absolute.\n\n'
-            '1. DATA OWNERSHIP & ZERO-KNOWLEDGE SYNC\n'
-            'When the Privacy Shield is enabled, your ledger entries are encrypted locally on your device with your 6-digit Sync PIN using AES-256 before synchronization. We do not have access to your encryption keys, and your cloud database backups are stored as ciphertext. We cannot read or access your financial logs.\n\n'
-            '2. AUTHENTICATION & PROFILE DATA\n'
-            'We store your name, email, and configured savings targets to manage authentication and user profiles. We do not collect other personal identifiers.\n\n'
-            '3. NO THIRD-PARTY SHARING\n'
-            'Fumet is ad-free and tracking-free. We do not trade, sell, or monitor your financial history or app usage logs.\n\n'
-            'For support, contact nigamman20@gmail.com.',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-        ],
-      ),
-    );
+  Future<void> _showPrivacyDialog(BuildContext context) async {
+    final Uri url = Uri.parse('https://www.termsfeed.com/live/d38cf065-3c8c-4804-b225-31c4396f2db5');
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch Privacy Policy.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
 
