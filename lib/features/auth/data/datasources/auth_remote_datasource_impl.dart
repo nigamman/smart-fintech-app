@@ -37,10 +37,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return auth.authStateChanges().asyncMap((firebaseUser) async {
       if (firebaseUser == null) return null;
 
-      final snapshot = await firestore
+      var snapshot = await firestore
           .collection(FirestoreCollections.users)
           .doc(firebaseUser.uid)
           .get();
+
+      // If document is not yet created (e.g. during Google Sign-in registration),
+      // poll up to 3 seconds to give the write operation time to complete.
+      int retries = 0;
+      while (!snapshot.exists && retries < 6) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        snapshot = await firestore
+            .collection(FirestoreCollections.users)
+            .doc(firebaseUser.uid)
+            .get();
+        retries++;
+      }
 
       if (!snapshot.exists) return null;
 

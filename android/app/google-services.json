@@ -58,6 +58,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "545085974690-1642oo5thfkhji0q7j8iqrtspb2devai.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nigamman.fumet",
+            "certificate_hash": "fcd087bec94fbeb001fb88257ff823eb606417ea"
+          }
+        },
+        {
+          "client_id": "545085974690-6biqrv24ut7ltv8nqtv657fla308c1hi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nigamman.fumet",
+            "certificate_hash": "b1df7386512b70365b2bedac43bf4036a489375a"
+          }
+        },
+        {
           "client_id": "545085974690-n7qp4f7dt0e2a5vfvs489to9vbihu7q2.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

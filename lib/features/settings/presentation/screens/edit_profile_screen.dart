@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../../core/utils/thousands_formatter.dart';
 import '../../../../core/extensions/num_extensions.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -48,6 +49,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _initialized = true;
   }
 
+  void _logout() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(authRepositoryProvider).logout();
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Error logging out: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileStreamProvider);
@@ -79,30 +91,56 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Edit Profile',
+                          user.monthlyIncome == 0.0 ? 'Set Up Profile' : 'Edit Profile',
                           style: GoogleFonts.fraunces(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => context.pop(),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.border, width: 1.0),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                        user.monthlyIncome == 0.0
+                            ? GestureDetector(
+                                onTap: _logout,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: AppColors.expense.withOpacity(0.5)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.logout_rounded, size: 14, color: AppColors.expense),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Logout',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: AppColors.expense,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: () => context.pop(),
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.border, width: 1.0),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -243,7 +281,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             messenger.showSnackBar(
                               const SnackBar(content: Text('Profile updated successfully!')),
                             );
-                            context.pop();
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/dashboard');
+                            }
                           } catch (e) {
                             messenger.showSnackBar(
                               SnackBar(content: Text('Failed to update: $e')),
@@ -258,9 +300,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
-                            'Save Changes',
-                            style: TextStyle(
+                          child: Text(
+                            user.monthlyIncome == 0.0 ? 'Save Profile' : 'Save Changes',
+                            style: const TextStyle(
                               color: AppColors.background,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,

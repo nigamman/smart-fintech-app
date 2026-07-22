@@ -1046,13 +1046,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context);
                 final messenger = ScaffoldMessenger.of(context);
                 try {
-                  // Purge User Data from Firestore
-                  await ref.read(firestoreProvider).collection('users').doc(uid).delete();
-                  // Delete Firebase User Session
-                  await FirebaseAuth.instance.currentUser?.delete();
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Account successfully deleted.')),
-                  );
+                  final firestore = ref.read(firestoreProvider);
+                  
+                  // 1. Keep copy of user data in memory in case Auth deletion fails
+                  final userSnap = await firestore.collection('users').doc(uid).get();
+                  final userMap = userSnap.data();
+
+                  // 2. Delete the Firestore user document
+                  await firestore.collection('users').doc(uid).delete();
+
+                  try {
+                    // 3. Clear user preferences locally first
+                    ref.read(preferencesProvider.notifier).clearUserPreferences();
+                    
+                    // 4. Delete Auth user session
+                    await FirebaseAuth.instance.currentUser?.delete();
+                    
+                    // 5. Log out cleanly to reset UI and stream providers
+                    await ref.read(authRepositoryProvider).logout();
+
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Account successfully deleted.')),
+                    );
+                  } catch (authError) {
+                    // 6. Restore user document in Firestore if Auth deletion failed
+                    if (userMap != null) {
+                      await firestore.collection('users').doc(uid).set(userMap);
+                    }
+                    
+                    // If it requires recent login, show specific instructions
+                    if (authError is FirebaseAuthException && authError.code == 'requires-recent-login') {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('For security, please log out and log back in, then try deleting again.'),
+                          duration: Duration(seconds: 5),
+                        ),
+                      );
+                    } else {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Error deleting account authentication: $authError')),
+                      );
+                    }
+                  }
                 } catch (e) {
                   messenger.showSnackBar(
                     SnackBar(content: Text('Error deleting account: $e')),

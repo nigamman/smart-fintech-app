@@ -222,6 +222,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // User is logged in
+      
+      // Force setup of profile if monthlyIncome is 0.0 (e.g. new Google Sign-in users)
+      if (user.monthlyIncome == 0.0) {
+        if (location == '/edit-profile') return null;
+        return '/edit-profile';
+      }
+
       if (location == '/' || location == '/onboarding') {
         return '/dashboard';
       }
