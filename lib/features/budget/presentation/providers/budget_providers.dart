@@ -12,6 +12,8 @@ import '../../data/datasources/budget_remote_datasource_impl.dart';
 import '../../data/repositories/budget_repository_impl.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/repositories/budget_repository.dart';
+import '../../../../core/providers/notification_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
 final budgetRemoteDataSourceProvider = Provider<BudgetRemoteDataSource>((ref) {
   return BudgetRemoteDataSourceImpl(
@@ -189,3 +191,36 @@ class BudgetController extends AsyncNotifier<void> {
     });
   }
 }
+
+final budgetAlertListenerProvider = Provider<void>((ref) {
+  ref.listen<AsyncValue<MonthlyBudgetProgress>>(budgetProgressProvider, (previous, next) {
+    final preferences = ref.read(preferencesProvider);
+    if (!preferences.isBudgetNotificationsEnabled) return;
+
+    next.whenData((progress) {
+      if (progress.totalLimit <= 0) return;
+
+      final previousProgress = previous?.value;
+      
+      final wasBelow80 = previousProgress == null || (previousProgress.totalSpent / previousProgress.totalLimit) < 0.8;
+      final wasBelow100 = previousProgress == null || (previousProgress.totalSpent / previousProgress.totalLimit) < 1.0;
+      
+      final isAbove80 = progress.progressPercentage >= 0.8 && progress.progressPercentage < 1.0;
+      final isAbove100 = progress.progressPercentage >= 1.0;
+
+      final currency = preferences.currency;
+
+      if (isAbove100 && wasBelow100) {
+        ref.read(notificationHelperProvider).showBudgetAlert(
+          title: 'Budget Exceeded 🚨',
+          body: 'You have spent $currency${progress.totalSpent.toStringAsFixed(0)} of your $currency${progress.totalLimit.toStringAsFixed(0)} limit.',
+        );
+      } else if (isAbove80 && wasBelow80) {
+        ref.read(notificationHelperProvider).showBudgetAlert(
+          title: 'Budget Warning (80% Reached) ⚠️',
+          body: 'You have spent $currency${progress.totalSpent.toStringAsFixed(0)} of your $currency${progress.totalLimit.toStringAsFixed(0)} limit.',
+        );
+      }
+    });
+  });
+});

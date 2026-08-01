@@ -12,6 +12,8 @@ class PreferencesState {
   final ThemeMode themeMode;
   final bool isEncryptionEnabled;
   final String? syncPassphrase;
+  final bool isSubscriptionNotificationsEnabled;
+  final bool isBudgetNotificationsEnabled;
 
   const PreferencesState({
     required this.currency,
@@ -19,6 +21,8 @@ class PreferencesState {
     required this.themeMode,
     this.isEncryptionEnabled = false,
     this.syncPassphrase,
+    this.isSubscriptionNotificationsEnabled = true,
+    this.isBudgetNotificationsEnabled = true,
   });
 
   PreferencesState copyWith({
@@ -27,6 +31,8 @@ class PreferencesState {
     ThemeMode? themeMode,
     bool? isEncryptionEnabled,
     String? syncPassphrase,
+    bool? isSubscriptionNotificationsEnabled,
+    bool? isBudgetNotificationsEnabled,
   }) {
     return PreferencesState(
       currency: currency ?? this.currency,
@@ -34,6 +40,8 @@ class PreferencesState {
       themeMode: themeMode ?? this.themeMode,
       isEncryptionEnabled: isEncryptionEnabled ?? this.isEncryptionEnabled,
       syncPassphrase: syncPassphrase ?? this.syncPassphrase,
+      isSubscriptionNotificationsEnabled: isSubscriptionNotificationsEnabled ?? this.isSubscriptionNotificationsEnabled,
+      isBudgetNotificationsEnabled: isBudgetNotificationsEnabled ?? this.isBudgetNotificationsEnabled,
     );
   }
 }
@@ -55,6 +63,8 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
         themeMode: ThemeMode.dark,
         isEncryptionEnabled: false,
         syncPassphrase: null,
+        isSubscriptionNotificationsEnabled: true,
+        isBudgetNotificationsEnabled: true,
       );
     }
 
@@ -66,6 +76,9 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
 
     final isEncryptionEnabled = _box.get('${userId}_isEncryptionEnabled', defaultValue: false) as bool;
     final syncPassphrase = _box.get('${userId}_syncPassphrase') as String?;
+    
+    final isSubscriptionNotificationsEnabled = _box.get('${userId}_isSubscriptionNotificationsEnabled', defaultValue: true) as bool;
+    final isBudgetNotificationsEnabled = _box.get('${userId}_isBudgetNotificationsEnabled', defaultValue: true) as bool;
 
     return PreferencesState(
       currency: currency,
@@ -73,6 +86,8 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
       themeMode: themeMode,
       isEncryptionEnabled: isEncryptionEnabled,
       syncPassphrase: syncPassphrase,
+      isSubscriptionNotificationsEnabled: isSubscriptionNotificationsEnabled,
+      isBudgetNotificationsEnabled: isBudgetNotificationsEnabled,
     );
   }
 
@@ -185,14 +200,20 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
       _box.delete('${userId}_isEncryptionEnabled');
       _box.delete('${userId}_syncPassphrase');
       _box.delete('${userId}_syncPinHash');
+      _box.delete('${userId}_isSubscriptionNotificationsEnabled');
+      _box.delete('${userId}_isBudgetNotificationsEnabled');
     }
     _box.delete('isEncryptionEnabled');
     _box.delete('syncPassphrase');
     _box.delete('syncPinHash');
+    _box.delete('isSubscriptionNotificationsEnabled');
+    _box.delete('isBudgetNotificationsEnabled');
 
     state = state.copyWith(
       isEncryptionEnabled: false,
       syncPassphrase: null,
+      isSubscriptionNotificationsEnabled: true,
+      isBudgetNotificationsEnabled: true,
     );
   }
 
@@ -218,6 +239,26 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
       return pinHash == storedHash;
     }
     return false;
+  }
+
+  void updateSubscriptionNotifications(bool enabled) {
+    final userId = ref.read(authStateProvider).value?.id;
+    if (userId != null) {
+      _box.put('${userId}_isSubscriptionNotificationsEnabled', enabled);
+    } else {
+      _box.put('isSubscriptionNotificationsEnabled', enabled);
+    }
+    state = state.copyWith(isSubscriptionNotificationsEnabled: enabled);
+  }
+
+  void updateBudgetNotifications(bool enabled) {
+    final userId = ref.read(authStateProvider).value?.id;
+    if (userId != null) {
+      _box.put('${userId}_isBudgetNotificationsEnabled', enabled);
+    } else {
+      _box.put('isBudgetNotificationsEnabled', enabled);
+    }
+    state = state.copyWith(isBudgetNotificationsEnabled: enabled);
   }
 }
 

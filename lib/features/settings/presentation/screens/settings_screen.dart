@@ -19,6 +19,7 @@ import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../../core/services/export_service.dart';
 import '../../../dashboard/presentation/screens/main_navigation_screen.dart';
+import '../../../../core/providers/notification_providers.dart';
 import '../providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -28,8 +29,39 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   int _activeTabIndex = 0;
+  bool _hasNotificationPermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermissionStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionStatus();
+    }
+  }
+
+  Future<void> _checkPermissionStatus() async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final allowed = await ref.read(notificationHelperProvider).checkPermission();
+      setState(() {
+        _hasNotificationPermission = allowed;
+      });
+    });
+  }
 
   Widget _buildCategorySelector(int activeIndex, Function(int) onTap) {
     final categories = [
@@ -382,6 +414,92 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       subtitle: 'Update your 6-digit passcode',
                       onTap: () => _showPinChangeSheet(context, user.id),
                     ),
+                ],
+              ),
+            ),
+            VSpace.lg,
+
+            // Alerts & Notifications section
+            _buildSectionHeader('Alerts & Notifications'),
+            _buildSettingsCard(
+              child: Column(
+                children: [
+                  _SettingsTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: 'Subscription Reminders',
+                    subtitle: 'Alert 1 day before upcoming bills',
+                    trailing: Switch(
+                      value: preferences.isSubscriptionNotificationsEnabled && _hasNotificationPermission,
+                      activeColor: AppColors.primary,
+                      onChanged: (val) async {
+                        if (val) {
+                          final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
+                          if (!granted) {
+                            await ref.read(notificationHelperProvider).openAppSettingsPage();
+                            return;
+                          }
+                          setState(() {
+                            _hasNotificationPermission = true;
+                          });
+                        }
+                        ref.read(preferencesProvider.notifier).updateSubscriptionNotifications(val);
+                      },
+                    ),
+                    onTap: () async {
+                      final current = preferences.isSubscriptionNotificationsEnabled && _hasNotificationPermission;
+                      if (!current) {
+                        final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
+                        if (!granted) {
+                          await ref.read(notificationHelperProvider).openAppSettingsPage();
+                          return;
+                        }
+                        setState(() {
+                          _hasNotificationPermission = true;
+                        });
+                        ref.read(preferencesProvider.notifier).updateSubscriptionNotifications(true);
+                      } else {
+                        ref.read(preferencesProvider.notifier).updateSubscriptionNotifications(false);
+                      }
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: Icons.warning_amber_rounded,
+                    title: 'Budget Warnings',
+                    subtitle: 'Alert when category limits reach 80% or 100%',
+                    trailing: Switch(
+                      value: preferences.isBudgetNotificationsEnabled && _hasNotificationPermission,
+                      activeColor: AppColors.primary,
+                      onChanged: (val) async {
+                        if (val) {
+                          final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
+                          if (!granted) {
+                            await ref.read(notificationHelperProvider).openAppSettingsPage();
+                            return;
+                          }
+                          setState(() {
+                            _hasNotificationPermission = true;
+                          });
+                        }
+                        ref.read(preferencesProvider.notifier).updateBudgetNotifications(val);
+                      },
+                    ),
+                    onTap: () async {
+                      final current = preferences.isBudgetNotificationsEnabled && _hasNotificationPermission;
+                      if (!current) {
+                        final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
+                        if (!granted) {
+                          await ref.read(notificationHelperProvider).openAppSettingsPage();
+                          return;
+                        }
+                        setState(() {
+                          _hasNotificationPermission = true;
+                        });
+                        ref.read(preferencesProvider.notifier).updateBudgetNotifications(true);
+                      } else {
+                        ref.read(preferencesProvider.notifier).updateBudgetNotifications(false);
+                      }
+                    },
+                  ),
                 ],
               ),
             ),

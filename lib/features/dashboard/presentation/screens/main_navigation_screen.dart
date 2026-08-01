@@ -14,7 +14,6 @@ import 'home_screen.dart';
 import '../../../transaction/presentation/screens/activity_screen.dart';
 import '../../../budget/presentation/screens/planning_screen.dart';
 import '../../../analytics/presentation/screens/insights_screen.dart';
-import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../transaction/domain/entities/transaction.dart';
