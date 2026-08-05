@@ -21,6 +21,7 @@ import '../../../transaction/domain/entities/transaction.dart';
 import '../../../transaction/data/models/transaction_model.dart';
 
 final mainNavigationIndexProvider = StateProvider<int>((ref) => 0);
+final ledgerTabShowSplitsProvider = StateProvider<bool>((ref) => false);
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
@@ -401,7 +402,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
  
-    return Scaffold(
+    return PopScope(
+      canPop: selectedIndex == 0,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        ref.read(mainNavigationIndexProvider.notifier).state = 0;
+      },
+      child: Scaffold(
       body: UpgradeAlert(
         child: IndexedStack(
           index: selectedIndex,
@@ -463,6 +470,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

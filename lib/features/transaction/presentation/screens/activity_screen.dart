@@ -30,7 +30,6 @@ class ActivityScreen extends ConsumerStatefulWidget {
 }
 
 class _ActivityScreenState extends ConsumerState<ActivityScreen> {
-  bool _showSplits = false;
   bool _isSearching = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -347,6 +346,51 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
     );
   }
 
+  Widget _buildViewAllButton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: BouncyButton(
+          onTap: () => context.push('/todays-ledger'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.0),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'View All History',
+                  style: AppTextStyles.label.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppColors.primary,
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFlatTransactionList(List<Transaction> txs, String currency) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -463,6 +507,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
             }),
           ),
         ),
+        _buildViewAllButton(context),
       ],
     );
   }
@@ -474,8 +519,11 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   ) {
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: sortedDates.length,
+      itemCount: sortedDates.length + 1,
       itemBuilder: (context, dateIndex) {
+        if (dateIndex == sortedDates.length) {
+          return _buildViewAllButton(context);
+        }
         final date = sortedDates[dateIndex];
         final dayTxs = grouped[date]!;
 
@@ -615,6 +663,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showSplits = ref.watch(ledgerTabShowSplitsProvider);
     final transactionsAsync = ref.watch(transactionsStreamProvider);
     final userAsync = ref.watch(userProfileStreamProvider);
     final currency = ref.watch(preferencesProvider).currency;
@@ -740,10 +789,10 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => _showSplits = false),
+                        onTap: () => ref.read(ledgerTabShowSplitsProvider.notifier).state = false,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: !_showSplits ? AppColors.primary : Colors.transparent,
+                            color: !showSplits ? AppColors.primary : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           alignment: Alignment.center,
@@ -751,7 +800,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                             'Activity',
                             style: AppTextStyles.body.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: !_showSplits ? AppColors.background : AppColors.primaryText,
+                              color: !showSplits ? AppColors.background : AppColors.primaryText,
                               fontSize: 13,
                             ),
                           ),
@@ -760,10 +809,10 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => _showSplits = true),
+                        onTap: () => ref.read(ledgerTabShowSplitsProvider.notifier).state = true,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: _showSplits ? AppColors.primary : Colors.transparent,
+                            color: showSplits ? AppColors.primary : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           alignment: Alignment.center,
@@ -771,7 +820,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                             'Splits',
                             style: AppTextStyles.body.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: _showSplits ? AppColors.background : AppColors.primaryText,
+                              color: showSplits ? AppColors.background : AppColors.primaryText,
                               fontSize: 13,
                             ),
                           ),
@@ -845,7 +894,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
               // Main Body Layout
               Expanded(
-                child: _showSplits
+                child: showSplits
                     ? const SplitLedgerScreen(isEmbedded: true)
                     : transactionsAsync.when(
                         loading: () => ListView(
@@ -882,9 +931,23 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                             filtered.sort((a, b) => a.amount.compareTo(b.amount));
                           }
 
-                          // Group by Date
+                          // Calculate stats on the FULL filtered list
+                          final totalIncome = filtered
+                              .where((tx) => tx.type == TransactionType.income)
+                              .fold<double>(0.0, (sum, tx) => sum + tx.amount);
+
+                          final totalExpenses = filtered
+                              .where((tx) => tx.type == TransactionType.expense)
+                              .fold<double>(0.0, (sum, tx) => sum + tx.amount);
+
+                          final net = totalIncome - totalExpenses;
+
+                          // Limit to latest 10 transactions for tab display list
+                          final displayedTxs = filtered.take(10).toList();
+
+                          // Group by Date on displayed list only
                           final Map<DateTime, List<Transaction>> grouped = {};
-                          for (final tx in filtered) {
+                          for (final tx in displayedTxs) {
                             final dateOnly = DateTime(
                               tx.transactionDate.year,
                               tx.transactionDate.month,
@@ -898,17 +961,6 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                           } else {
                             sortedDates.sort((a, b) => b.compareTo(a));
                           }
-
-                          // Calculate stats
-                          final totalIncome = filtered
-                              .where((tx) => tx.type == TransactionType.income)
-                              .fold<double>(0.0, (sum, tx) => sum + tx.amount);
-
-                          final totalExpenses = filtered
-                              .where((tx) => tx.type == TransactionType.expense)
-                              .fold<double>(0.0, (sum, tx) => sum + tx.amount);
-
-                          final net = totalIncome - totalExpenses;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1021,7 +1073,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                                           ref.invalidate(transactionsStreamProvider);
                                         },
                                         child: _sortBy.startsWith('Amount')
-                                            ? _buildFlatTransactionList(filtered, currency)
+                                            ? _buildFlatTransactionList(displayedTxs, currency)
                                             : _buildGroupedTransactionList(sortedDates, grouped, currency),
                                       ),
                               ),

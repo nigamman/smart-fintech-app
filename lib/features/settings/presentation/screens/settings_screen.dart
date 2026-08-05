@@ -514,7 +514,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('App Version', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                        Text('2.1.2 ', style: AppTextStyles.bodySecondary),
+                        Text('2.1.0 ', style: AppTextStyles.bodySecondary),
                       ],
                     ),
                     VSpace.md,

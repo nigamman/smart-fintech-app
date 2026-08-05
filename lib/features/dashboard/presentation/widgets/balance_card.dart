@@ -210,8 +210,15 @@ class _BalanceCardState extends ConsumerState<BalanceCard> with SingleTickerProv
   Widget _buildCalcRow(String label, String value, {bool isNegative = false, bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTextStyles.caption.copyWith(fontSize: 12)),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(fontSize: 12),
+          ),
+        ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: isBold

@@ -491,7 +491,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                                BouncyButton(
                                  onTap: () {
-                                   ref.read(mainNavigationIndexProvider.notifier).state = 1;
+                                   context.push('/todays-ledger');
                                  },
                                  child: Text(
                                    'View all',
