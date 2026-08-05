@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,8 +35,29 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()..onTap = _launchPolicyUrl;
+    _privacyRecognizer = TapGestureRecognizer()..onTap = _launchPolicyUrl;
+  }
+
+  void _launchPolicyUrl() async {
+    final Uri url = Uri.parse('https://www.termsfeed.com/live/d38cf065-3c8c-4804-b225-31c4396f2db5');
+    try {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error launching policy URL: $e');
+    }
+  }
+
   @override
   void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -358,6 +381,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             const TextSpan(text: 'By continuing you agree to Fumet\'s '),
                             TextSpan(
                               text: 'Terms',
+                              recognizer: _termsRecognizer,
                               style: TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
@@ -366,6 +390,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             const TextSpan(text: ' and '),
                             TextSpan(
                               text: 'Privacy Policy',
+                              recognizer: _privacyRecognizer,
                               style: TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,

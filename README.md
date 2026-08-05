@@ -131,8 +131,8 @@ Each folder under `features/[feature_name]` is split into three layers:
 ### 1. Installation
 Clone the repository and pull the Dart dependencies:
 ```bash
-git clone <repository-url>
-cd fintech_app
+git clone <https://github.com/nigamman/smart-fintech-app.git>
+cd smart-fintech-app
 flutter pub get
 ```
 

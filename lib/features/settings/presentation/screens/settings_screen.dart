@@ -19,7 +19,6 @@ import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../../core/services/export_service.dart';
 import '../../../dashboard/presentation/screens/main_navigation_screen.dart';
-import '../../../../core/providers/notification_providers.dart';
 import '../providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -29,39 +28,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _activeTabIndex = 0;
-  bool _hasNotificationPermission = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _checkPermissionStatus();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkPermissionStatus();
-    }
-  }
-
-  Future<void> _checkPermissionStatus() async {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      final allowed = await ref.read(notificationHelperProvider).checkPermission();
-      setState(() {
-        _hasNotificationPermission = allowed;
-      });
-    });
-  }
 
   Widget _buildCategorySelector(int activeIndex, Function(int) onTap) {
     final categories = [
@@ -417,93 +385,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                 ],
               ),
             ),
-            VSpace.lg,
 
-            // Alerts & Notifications section
-            _buildSectionHeader('Alerts & Notifications'),
-            _buildSettingsCard(
-              child: Column(
-                children: [
-                  _SettingsTile(
-                    icon: Icons.notifications_active_outlined,
-                    title: 'Subscription Reminders',
-                    subtitle: 'Alert 1 day before upcoming bills',
-                    trailing: Switch(
-                      value: preferences.isSubscriptionNotificationsEnabled && _hasNotificationPermission,
-                      activeColor: AppColors.primary,
-                      onChanged: (val) async {
-                        if (val) {
-                          final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
-                          if (!granted) {
-                            await ref.read(notificationHelperProvider).openAppSettingsPage();
-                            return;
-                          }
-                          setState(() {
-                            _hasNotificationPermission = true;
-                          });
-                        }
-                        ref.read(preferencesProvider.notifier).updateSubscriptionNotifications(val);
-                      },
-                    ),
-                    onTap: () async {
-                      final current = preferences.isSubscriptionNotificationsEnabled && _hasNotificationPermission;
-                      if (!current) {
-                        final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
-                        if (!granted) {
-                          await ref.read(notificationHelperProvider).openAppSettingsPage();
-                          return;
-                        }
-                        setState(() {
-                          _hasNotificationPermission = true;
-                        });
-                        ref.read(preferencesProvider.notifier).updateSubscriptionNotifications(true);
-                      } else {
-                        ref.read(preferencesProvider.notifier).updateSubscriptionNotifications(false);
-                      }
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.warning_amber_rounded,
-                    title: 'Budget Warnings',
-                    subtitle: 'Alert when category limits reach 80% or 100%',
-                    trailing: Switch(
-                      value: preferences.isBudgetNotificationsEnabled && _hasNotificationPermission,
-                      activeColor: AppColors.primary,
-                      onChanged: (val) async {
-                        if (val) {
-                          final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
-                          if (!granted) {
-                            await ref.read(notificationHelperProvider).openAppSettingsPage();
-                            return;
-                          }
-                          setState(() {
-                            _hasNotificationPermission = true;
-                          });
-                        }
-                        ref.read(preferencesProvider.notifier).updateBudgetNotifications(val);
-                      },
-                    ),
-                    onTap: () async {
-                      final current = preferences.isBudgetNotificationsEnabled && _hasNotificationPermission;
-                      if (!current) {
-                        final granted = await ref.read(notificationHelperProvider).requestPermission() ?? false;
-                        if (!granted) {
-                          await ref.read(notificationHelperProvider).openAppSettingsPage();
-                          return;
-                        }
-                        setState(() {
-                          _hasNotificationPermission = true;
-                        });
-                        ref.read(preferencesProvider.notifier).updateBudgetNotifications(true);
-                      } else {
-                        ref.read(preferencesProvider.notifier).updateBudgetNotifications(false);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            VSpace.lg,
 
             // Data Management section
             _buildSectionHeader('Data Management'),
@@ -554,12 +436,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             _buildSettingsCard(
               child: Column(
                 children: [
-                  _SettingsTile(
-                    icon: Icons.lock_outline_rounded,
-                    title: 'Reset Password',
-                    subtitle: 'Get password reset link via email',
-                    onTap: () => _handlePasswordReset(context, ref, user.email),
-                  ),
+
                   _SettingsTile(
                     icon: Icons.logout_rounded,
                     title: 'Logout',
@@ -1056,19 +933,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     );
   }
 
-  void _handlePasswordReset(BuildContext context, WidgetRef ref, String email) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(authRepositoryProvider).forgotPassword(email: email);
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Password reset link sent to your email successfully!')),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Failed to send reset link: $e')),
-      );
-    }
-  }
+
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -1299,18 +1164,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   }
 
 
-  void _showNotificationPlaceholder(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Alert Reminders'),
-        content: const Text('Notification preferences is a premium feature under development.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-        ],
-      ),
-    );
-  }
+
 
   void _showExportDialog(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -1453,32 +1307,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     );
   }
 
-  void _showTermsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Terms & Conditions'),
-        content: const SingleChildScrollView(
-          child: Text(
-            '1. Acceptance of Terms: By using Fumet, you agree to these terms.\n\n'
-            '2. Financial Information: Fumet provides tools for tracking budget, and not certified financial advisory reports.\n\n'
-            '3. Data Storage: Your transactional and profile details are encrypted in Firestore.',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showPrivacyDialog(BuildContext context) async {
-    final Uri url = Uri.parse('https://www.termsfeed.com/live/d38cf065-3c8c-4804-b225-31c4396f2db5');
+  Future<void> _launchUrlHelper(BuildContext context, String urlString, String errorMessage) async {
+    final Uri url = Uri.parse(urlString);
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not launch Privacy Policy.')),
+            SnackBar(content: Text(errorMessage)),
           );
         }
       }
@@ -1489,6 +1324,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
         );
       }
     }
+  }
+
+  void _showTermsDialog(BuildContext context) {
+    _launchUrlHelper(
+      context,
+      'https://www.termsfeed.com/live/d38cf065-3c8c-4804-b225-31c4396f2db5',
+      'Could not launch Terms & Conditions.',
+    );
+  }
+
+  Future<void> _showPrivacyDialog(BuildContext context) async {
+    await _launchUrlHelper(
+      context,
+      'https://www.termsfeed.com/live/d38cf065-3c8c-4804-b225-31c4396f2db5',
+      'Could not launch Privacy Policy.',
+    );
   }
 
 

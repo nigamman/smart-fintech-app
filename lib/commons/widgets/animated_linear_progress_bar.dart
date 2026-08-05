@@ -21,7 +21,7 @@ class AnimatedLinearProgressBar extends StatefulWidget {
 
 class _AnimatedLinearProgressBarState extends State<AnimatedLinearProgressBar> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _animation;
+  late Animation<double> _animation;
 
   @override
   void initState() {
@@ -44,6 +44,23 @@ class _AnimatedLinearProgressBarState extends State<AnimatedLinearProgressBar> w
     ]).animate(_controller);
 
     _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedLinearProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.progress != widget.progress) {
+      final currentVal = _animation.value;
+      _controller.reset();
+      _animation = Tween<double>(
+        begin: currentVal,
+        end: widget.progress,
+      ).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+      );
+      _controller.duration = const Duration(milliseconds: 800);
+      _controller.forward();
+    }
   }
 
   @override

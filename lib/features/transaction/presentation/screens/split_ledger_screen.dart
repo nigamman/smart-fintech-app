@@ -71,7 +71,11 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     return parts.every((part) => part.contains('[PAID]'));
   }
 
-  Future<void> _settleAllWithFriend(List<Transaction> friendTransactions, String friendName) async {
+  Future<void> _settleAllWithFriend(
+    List<Transaction> friendTransactions,
+    String friendName, {
+    BuildContext? sheetContext,
+  }) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(transactionControllerProvider.notifier);
 
@@ -141,12 +145,105 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
             date: DateTime.now(),
           );
         }
+
+        if (sheetContext != null && sheetContext.mounted) {
+          Navigator.pop(sheetContext);
+        }
+
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('All balances settled with $capitalizedFriendName!')),
         );
       } catch (e) {
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('Error settling balance: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _settleSingleBillWithFriend(
+    Transaction tx,
+    String friendName,
+    String currency, {
+    BuildContext? sheetContext,
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(transactionControllerProvider.notifier);
+
+    final isPaid = tx.isSplitPaid || isFriendPaid(tx, friendName);
+    if (isPaid) return;
+
+    final String capitalizedFriendName = friendName.isNotEmpty
+        ? friendName[0].toUpperCase() + friendName.substring(1)
+        : friendName;
+
+    final txName = tx.note != null && tx.note!.isNotEmpty
+        ? tx.note!
+        : tx.category.name[0].toUpperCase() + tx.category.name.substring(1);
+
+    final rawFriends = tx.splitWith ?? 'Unknown Friend';
+    final List<String> friendsList = rawFriends.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    final friendsCount = friendsList.isEmpty ? 1 : friendsList.length;
+    final friendShare = tx.amount / (1.0 + friendsCount);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Settle Bill with $capitalizedFriendName?'),
+        content: Text('Are you sure you want to mark the split of "$txName" ($currency${friendShare.toStringAsFixed(0)}) with $capitalizedFriendName as repaid?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.income),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final updatedSplitWith = markFriendAsPaid(tx.splitWith ?? '', friendName);
+        final allPaid = areAllFriendsPaid(updatedSplitWith);
+
+        // 1. Mark original split transaction friend status in database
+        await notifier.updateTransaction(
+          id: tx.id,
+          amount: tx.amount,
+          type: tx.type,
+          category: tx.category,
+          note: tx.note,
+          date: tx.transactionDate,
+          createdAt: tx.createdAt,
+          isSplit: true,
+          splitWith: updatedSplitWith,
+          splitPercentage: tx.splitPercentage,
+          isSplitPaid: allPaid,
+        );
+
+        // 2. Create a new repayment income transaction to reflect cash flow
+        await notifier.addTransaction(
+          amount: friendShare,
+          type: TransactionType.income,
+          category: TransactionCategory.other,
+          note: 'Repayment: $txName ($capitalizedFriendName)',
+          date: DateTime.now(),
+        );
+
+        if (sheetContext != null && sheetContext.mounted) {
+          Navigator.pop(sheetContext);
+        }
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('"$txName" settled with $capitalizedFriendName!')),
+        );
+      } catch (e) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Error settling bill: $e')),
         );
       }
     }
@@ -207,8 +304,7 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                         if (outstanding > 0)
                           ElevatedButton.icon(
                             onPressed: () async {
-                              Navigator.pop(sbCtx);
-                              await _settleAllWithFriend(txList, friendName);
+                              await _settleAllWithFriend(txList, friendName, sheetContext: sbCtx);
                             },
                             icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
                             label: const Text('Settle All'),
@@ -258,6 +354,11 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
 
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
+                            onTap: isPaid
+                                ? null
+                                : () async {
+                                    await _settleSingleBillWithFriend(tx, friendName, currency, sheetContext: sbCtx);
+                                  },
                             title: Text(
                               tx.note != null && tx.note!.isNotEmpty
                                   ? tx.note!
@@ -280,13 +381,35 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                                     decoration: isPaid ? TextDecoration.lineThrough : null,
                                   ),
                                 ),
-                                Text(
-                                  isPaid ? 'Repaid' : 'Pending',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: isPaid ? AppColors.secondaryText : AppColors.warning,
-                                    fontSize: 9,
+                                if (isPaid)
+                                  Text(
+                                    'Repaid',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 9,
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.income.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: AppColors.income.withOpacity(0.4),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Settle',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.income,
+                                      ),
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           );
@@ -626,12 +749,51 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Split Ledger'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: bodyContent,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Custom Header Row matching Settings/Add Transaction Screen
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Split Ledger',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.maybePop(context),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: bodyContent,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

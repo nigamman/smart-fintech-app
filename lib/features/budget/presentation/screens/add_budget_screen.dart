@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/utils/thousands_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -26,11 +29,49 @@ class AddBudgetScreen extends ConsumerStatefulWidget {
 }
 
 class _AddBudgetScreenState extends ConsumerState<AddBudgetScreen> {
+  static bool _hasShownNudge = false;
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _amountController;
   TransactionCategory? _selectedCategory;
   late int _selectedMonth;
   late int _selectedYear;
+
+  late final ScrollController _categoryScrollController;
+  Timer? _scrollHintTimer;
+
+  void _onUserInteract() {
+    if (_scrollHintTimer?.isActive == true) {
+      _scrollHintTimer?.cancel();
+      _hasShownNudge = true;
+    }
+  }
+
+  void _triggerScrollHint() {
+    if (!mounted) return;
+
+    if (_categoryScrollController.hasClients) {
+      _categoryScrollController.animateTo(
+        25.0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (!mounted) return;
+          if (_categoryScrollController.hasClients) {
+            _categoryScrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      });
+    }
+  }
+
+  String _formatAmount(double val) {
+    return NumberFormat('#,##0', 'en_US').format(val.abs());
+  }
 
   bool get _isEditMode => widget.budget != null;
 
@@ -53,18 +94,33 @@ class _AddBudgetScreenState extends ConsumerState<AddBudgetScreen> {
   @override
   void initState() {
     super.initState();
+    _categoryScrollController = ScrollController();
     final b = widget.budget;
     _amountController = TextEditingController(
-      text: b != null ? b.limitAmount.toStringAsFixed(0) : '',
+      text: b != null ? _formatAmount(b.limitAmount) : '',
     );
     _selectedCategory = b?.category ?? TransactionCategory.food;
     final now = DateTime.now();
     _selectedMonth = b?.month ?? now.month;
     _selectedYear = b?.year ?? now.year;
+
+    // Run initial peek scroll hint animation once per session/first load
+    if (!_hasShownNudge) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollHintTimer = Timer(const Duration(milliseconds: 800), () {
+          _triggerScrollHint();
+          _hasShownNudge = true;
+        });
+      });
+    }
+
+    _categoryScrollController.addListener(_onUserInteract);
   }
 
   @override
   void dispose() {
+    _scrollHintTimer?.cancel();
+    _categoryScrollController.dispose();
     _amountController.dispose();
     super.dispose();
   }
@@ -164,7 +220,7 @@ class _AddBudgetScreenState extends ConsumerState<AddBudgetScreen> {
       return;
     }
 
-    final amount = double.tryParse(_amountController.text);
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount.')),
@@ -312,54 +368,84 @@ class _AddBudgetScreenState extends ConsumerState<AddBudgetScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: _expenseCategories.map((cat) {
-                    final isSelected = _selectedCategory == cat;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = cat;
-                        });
-                      },
-                      child: Container(
-                        width: 72,
-                        height: 72,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.border,
-                            width: isSelected ? 1.2 : 1.0,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _getCategoryIcon(cat),
-                              color: isSelected ? AppColors.primary : AppColors.primaryText,
-                              size: 20,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _getCategoryDisplayName(cat),
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? AppColors.primary : AppColors.disabledText,
+              Stack(
+                children: [
+                  SingleChildScrollView(
+                    controller: _categoryScrollController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: _expenseCategories.map((cat) {
+                        final isSelected = _selectedCategory == cat;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: GestureDetector(
+                            onTap: () {
+                              _onUserInteract();
+                              setState(() {
+                                _selectedCategory = cat;
+                              });
+                            },
+                            child: Container(
+                              width: 76,
+                              height: 76,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected ? AppColors.primary : AppColors.border,
+                                  width: isSelected ? 1.2 : 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _getCategoryIcon(cat),
+                                    color: isSelected ? AppColors.primary : AppColors.primaryText,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _getCategoryDisplayName(cat),
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? AppColors.primary : AppColors.disabledText,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: 0,
+                    width: 40,
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              AppColors.background.withOpacity(0.0),
+                              AppColors.background,
+                            ],
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -389,6 +475,7 @@ class _AddBudgetScreenState extends ConsumerState<AddBudgetScreen> {
                       child: TextFormField(
                         controller: _amountController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [ThousandsFormatter()],
                         textAlign: TextAlign.left,
                         cursorColor: AppColors.primary, // Custom gold cursor
                         cursorWidth: 2.0,
@@ -400,7 +487,8 @@ class _AddBudgetScreenState extends ConsumerState<AddBudgetScreen> {
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Cost amount is required';
-                          if (double.tryParse(val) == null || double.parse(val) <= 0) {
+                          final cleanVal = val.replaceAll(',', '');
+                          if (double.tryParse(cleanVal) == null || double.parse(cleanVal) <= 0) {
                             return 'Enter a valid cost';
                           }
                           return null;

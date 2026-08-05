@@ -35,6 +35,7 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 }
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
+  static bool _hasShownNudge = false;
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _amountController;
   late final TextEditingController _noteController;
@@ -58,12 +59,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return NumberFormat('#,##0', 'en_US').format(val.abs());
   }
 
+  void _onUserInteract() {
+    if (_scrollHintTimer?.isActive == true) {
+      _scrollHintTimer?.cancel();
+      _hasShownNudge = true;
+    }
+  }
+
   void _triggerScrollHint() {
     if (!mounted) return;
 
     if (_categoryScrollController.hasClients) {
       _categoryScrollController.animateTo(
-        45.0,
+        25.0,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       ).then((_) {
@@ -82,7 +90,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     if (_subcategoryScrollController.hasClients) {
       _subcategoryScrollController.animateTo(
-        40.0,
+        25.0,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       ).then((_) {
@@ -134,15 +142,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _isOthersSelected = false;
     }
 
-    // Run initial peek scroll hint animation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 800), _triggerScrollHint);
-    });
+    // Run initial peek scroll hint animation once per session/first load
+    if (!_hasShownNudge) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollHintTimer = Timer(const Duration(milliseconds: 800), () {
+          _triggerScrollHint();
+          _hasShownNudge = true;
+        });
+      });
+    }
 
-    // Setup periodic repeat peek scroll hint animation (every 8 seconds)
-    _scrollHintTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      _triggerScrollHint();
-    });
+    _categoryScrollController.addListener(_onUserInteract);
+    _subcategoryScrollController.addListener(_onUserInteract);
   }
 
   @override
@@ -215,11 +226,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         subs = ['Birthday', 'Holiday', 'Family'];
         break;
       default:
-        subs = ['General', 'Utilities', 'Other'];
+        subs = ['General', 'Utilities'];
     }
-    // Append 'Others' if not present
-    if (!subs.contains('Others')) {
-      subs.add('Others');
+    // Append 'Custom' if not present
+    if (!subs.contains('Custom')) {
+      subs.add('Custom');
     }
     return subs;
   }
@@ -574,78 +585,103 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 const SizedBox(height: 10),
                 
                 // Horizontal category cards list
-                SingleChildScrollView(
-                  controller: _categoryScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: TransactionCategory.values.where((cat) {
-                      if (_selectedType == TransactionType.income) {
-                        return cat == TransactionCategory.salary ||
-                            cat == TransactionCategory.freelance ||
-                            cat == TransactionCategory.investment ||
-                            cat == TransactionCategory.gift ||
-                            cat == TransactionCategory.transfer ||
-                            cat == TransactionCategory.other;
-                      } else {
-                        return cat == TransactionCategory.food ||
-                            cat == TransactionCategory.shopping ||
-                            cat == TransactionCategory.travel ||
-                            cat == TransactionCategory.bills ||
-                            cat == TransactionCategory.entertainment ||
-                            cat == TransactionCategory.health ||
-                            cat == TransactionCategory.education ||
-                            cat == TransactionCategory.transfer ||
-                            cat == TransactionCategory.other;
-                      }
-                    }).map((cat) {
-                      final isSelected = _selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedCategory = cat;
-                              _noteController.clear();
-                              _isOthersSelected = false;
-                            });
-                          },
-                          child: Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isSelected ? AppColors.primary : AppColors.border,
-                                width: isSelected ? 1.5 : 1.0,
+                Stack(
+                  children: [
+                    SingleChildScrollView(
+                      controller: _categoryScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: TransactionCategory.values.where((cat) {
+                          if (_selectedType == TransactionType.income) {
+                            return cat == TransactionCategory.salary ||
+                                cat == TransactionCategory.freelance ||
+                                cat == TransactionCategory.investment ||
+                                cat == TransactionCategory.gift ||
+                                cat == TransactionCategory.transfer ||
+                                cat == TransactionCategory.other;
+                          } else {
+                            return cat == TransactionCategory.food ||
+                                cat == TransactionCategory.shopping ||
+                                cat == TransactionCategory.travel ||
+                                cat == TransactionCategory.bills ||
+                                cat == TransactionCategory.entertainment ||
+                                cat == TransactionCategory.health ||
+                                cat == TransactionCategory.education ||
+                                cat == TransactionCategory.transfer ||
+                                cat == TransactionCategory.other;
+                          }
+                        }).map((cat) {
+                          final isSelected = _selectedCategory == cat;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: GestureDetector(
+                              onTap: () {
+                                _onUserInteract();
+                                setState(() {
+                                  _selectedCategory = cat;
+                                  _noteController.clear();
+                                  _isOthersSelected = false;
+                                });
+                              },
+                              child: Container(
+                                width: 76,
+                                height: 76,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : AppColors.border,
+                                    width: isSelected ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _getCategoryIcon(cat),
+                                      color: isSelected ? AppColors.primary : AppColors.secondaryText,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      cat.name[0].toUpperCase() + cat.name.substring(1),
+                                      style: AppTextStyles.label.copyWith(
+                                        fontSize: 9.5,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? AppColors.primaryText : AppColors.disabledText,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _getCategoryIcon(cat),
-                                  color: isSelected ? AppColors.primary : AppColors.secondaryText,
-                                  size: 20,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  cat.name[0].toUpperCase() + cat.name.substring(1),
-                                  style: AppTextStyles.label.copyWith(
-                                    fontSize: 9.5,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? AppColors.primaryText : AppColors.disabledText,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      width: 40,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                AppColors.background.withOpacity(0.0),
+                                AppColors.background,
                               ],
                             ),
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
@@ -696,55 +732,80 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 const SizedBox(height: 10),
 
                 // Horizontal chips layout
-                SingleChildScrollView(
-                  controller: _subcategoryScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: subcategories.map((sub) {
-                      final isOthers = sub.toLowerCase() == 'others';
-                      final isSelected = isOthers
-                          ? _isOthersSelected
-                          : (_noteController.text.trim().toLowerCase() == sub.toLowerCase() && !_isOthersSelected);
-                          
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(
-                            sub,
-                            style: AppTextStyles.label.copyWith(
-                              fontSize: 11,
-                              color: isSelected ? AppColors.background : AppColors.primaryText,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: AppColors.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: isSelected ? AppColors.primary : AppColors.border,
-                              width: 1.0,
-                            ),
-                          ),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                if (isOthers) {
-                                  _isOthersSelected = true;
-                                  _noteController.clear();
-                                } else {
-                                  _isOthersSelected = false;
-                                  _noteController.text = sub;
+                Stack(
+                  children: [
+                    SingleChildScrollView(
+                      controller: _subcategoryScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: subcategories.map((sub) {
+                          final isOthers = sub.toLowerCase() == 'custom';
+                          final isSelected = isOthers
+                              ? _isOthersSelected
+                              : (_noteController.text.trim().toLowerCase() == sub.toLowerCase() && !_isOthersSelected);
+                              
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(
+                                sub,
+                                style: AppTextStyles.label.copyWith(
+                                  fontSize: 11,
+                                  color: isSelected ? AppColors.background : AppColors.primaryText,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              selected: isSelected,
+                              selectedColor: AppColors.primary,
+                              backgroundColor: AppColors.surface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSelected ? AppColors.primary : AppColors.border,
+                                  width: 1.0,
+                                ),
+                              ),
+                              onSelected: (selected) {
+                                if (selected) {
+                                  _onUserInteract();
+                                  setState(() {
+                                    if (isOthers) {
+                                      _isOthersSelected = true;
+                                      _noteController.clear();
+                                    } else {
+                                      _isOthersSelected = false;
+                                      _noteController.text = sub;
+                                    }
+                                  });
                                 }
-                              });
-                            }
-                          },
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      width: 40,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                AppColors.background.withOpacity(0.0),
+                                AppColors.background,
+                              ],
+                            ),
+                          ),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
                 
                 // Custom Note / Subcategory Text Field (Only visible when Others is selected)

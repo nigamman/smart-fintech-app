@@ -9,7 +9,6 @@ import '../../data/repositories/subscription_repository_impl.dart';
 import '../../domain/entities/subscription.dart';
 import '../../domain/enums/billing_cycle.dart';
 import '../../domain/repositories/subscription_repository.dart';
-import '../../../../core/providers/notification_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 
 final subscriptionRemoteDataSourceProvider = Provider<SubscriptionRemoteDataSource>((ref) {
@@ -70,17 +69,6 @@ class SubscriptionController extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(subscriptionRepositoryProvider).saveSubscription(subscription);
-      
-      // Cancel previous notification if any (e.g. if editing)
-      await ref.read(notificationHelperProvider).cancelSubscriptionAlert(subscription.id);
-
-      // Schedule new notification if enabled
-      final preferences = ref.read(preferencesProvider);
-      if (preferences.isSubscriptionNotificationsEnabled) {
-        final currency = preferences.currency;
-        await ref.read(notificationHelperProvider).scheduleSubscriptionAlert(subscription, currency);
-      }
-
       ref.invalidate(dashboardDataProvider);
     });
   }
@@ -89,10 +77,6 @@ class SubscriptionController extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(subscriptionRepositoryProvider).deleteSubscription(subscriptionId);
-      
-      // Cancel notification alert
-      await ref.read(notificationHelperProvider).cancelSubscriptionAlert(subscriptionId);
-
       ref.invalidate(dashboardDataProvider);
     });
   }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:upgrader/upgrader.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -29,12 +30,6 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ActivityScreen(),
-    InsightsScreen(),
-    PlanningScreen(),
-  ];
 
   bool _isUnlockSheetOpen = false;
   bool _hasPromptedPinSetup = false;
@@ -79,7 +74,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         _handleWidgetUri(uri);
       }
     });
-
   }
 
   @override
@@ -87,6 +81,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     _widgetClickSubscription?.cancel();
     super.dispose();
   }
+
+
 
   void _handleWidgetUri(Uri uri) {
     debugPrint('Widget click intercepted in Flutter: $uri');
@@ -406,9 +402,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
  
     return Scaffold(
-      body: IndexedStack(
-        index: selectedIndex,
-        children: _screens,
+      body: UpgradeAlert(
+        child: IndexedStack(
+          index: selectedIndex,
+          children: [
+            const HomeScreen(),
+            const ActivityScreen(),
+            const InsightsScreen(),
+            PlanningScreen(key: ValueKey('planning_tab_$selectedIndex')),
+          ],
+        ),
       ),
       bottomNavigationBar: Container(
         height: 64 + bottomPadding,

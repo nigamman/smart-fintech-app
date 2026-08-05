@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/utils/thousands_formatter.dart';
 
 import '../../../../commons/widgets/bouncy_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -32,6 +33,10 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
   late final TextEditingController _currentAmountController;
   late DateTime _selectedDate;
 
+  String _formatAmount(double val) {
+    return NumberFormat('#,##0', 'en_US').format(val.abs());
+  }
+
   bool get _isEditMode => widget.savingsGoal != null;
 
   @override
@@ -43,10 +48,10 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
       setState(() {}); // refresh letter chip dynamically
     });
     _targetAmountController = TextEditingController(
-      text: goal != null ? goal.targetAmount.toStringAsFixed(0) : '',
+      text: goal != null ? _formatAmount(goal.targetAmount) : '',
     );
     _currentAmountController = TextEditingController(
-      text: goal != null ? goal.currentAmount.toStringAsFixed(0) : '0',
+      text: goal != null ? _formatAmount(goal.currentAmount) : '0',
     );
     _selectedDate = goal?.targetDate ?? DateTime.now().add(const Duration(days: 90));
   }
@@ -90,7 +95,7 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final targetVal = double.tryParse(_targetAmountController.text);
+    final targetVal = double.tryParse(_targetAmountController.text.replaceAll(',', ''));
     if (targetVal == null || targetVal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid target amount.')),
@@ -98,7 +103,7 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
       return;
     }
 
-    final currentVal = double.tryParse(_currentAmountController.text) ?? 0.0;
+    final currentVal = double.tryParse(_currentAmountController.text.replaceAll(',', '')) ?? 0.0;
     if (currentVal < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid current amount.')),
@@ -329,6 +334,7 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
                       child: TextFormField(
                         controller: _targetAmountController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [ThousandsFormatter()],
                         textAlign: TextAlign.left,
                         cursorColor: AppColors.primary, // Custom gold cursor
                         cursorWidth: 2.0,
@@ -340,7 +346,8 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
                         ),
                         validator: (val) {
                           if (val == null || val.isEmpty) return 'Target amount is required';
-                          if (double.tryParse(val) == null || double.parse(val) <= 0) {
+                          final cleanVal = val.replaceAll(',', '');
+                          if (double.tryParse(cleanVal) == null || double.parse(cleanVal) <= 0) {
                             return 'Enter a valid target';
                           }
                           return null;
@@ -416,6 +423,7 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
                           child: TextFormField(
                             controller: _currentAmountController,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [ThousandsFormatter()],
                             textAlign: TextAlign.right,
                             style: AppTextStyles.mono.copyWith(
                               fontSize: 13,
@@ -424,7 +432,8 @@ class _AddSavingsGoalScreenState extends ConsumerState<AddSavingsGoalScreen> {
                             ),
                             validator: (val) {
                               if (val == null || val.isEmpty) return 'Current saved amount is required';
-                              if (double.tryParse(val) == null || double.parse(val) < 0) {
+                              final cleanVal = val.replaceAll(',', '');
+                              if (double.tryParse(cleanVal) == null || double.parse(cleanVal) < 0) {
                                 return 'Enter valid deposit';
                               }
                               return null;
