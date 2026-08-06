@@ -20,7 +20,12 @@ import '../../../auth/presentation/widgets/premium_widgets.dart';
 
 class SplitLedgerScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
-  const SplitLedgerScreen({super.key, this.isEmbedded = false});
+  final String searchQuery;
+  const SplitLedgerScreen({
+    super.key,
+    this.isEmbedded = false,
+    this.searchQuery = '',
+  });
 
   @override
   ConsumerState<SplitLedgerScreen> createState() => _SplitLedgerScreenState();
@@ -461,12 +466,24 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Error: $err')),
       data: (transactions) {
-        final splitTransactions = transactions.where((tx) => tx.isSplit).toList();
+        final query = widget.searchQuery.trim().toLowerCase();
+        final splitTransactions = transactions.where((tx) {
+          if (!tx.isSplit) return false;
+          if (query.isEmpty) return true;
+
+          final noteMatches = (tx.note ?? '').toLowerCase().contains(query);
+          final categoryMatches = tx.category.name.toLowerCase().contains(query);
+          final friendMatches = (tx.splitWith ?? '').toLowerCase().contains(query);
+
+          return noteMatches || categoryMatches || friendMatches;
+        }).toList();
 
         if (splitTransactions.isEmpty) {
-          return const EmptyState(
-            title: 'No Split Bills',
-            subtitle: 'Add an expense and toggle "Split this bill" to get started.',
+          return EmptyState(
+            title: query.isEmpty ? 'No Split Bills' : 'No Matching Splits',
+            subtitle: query.isEmpty
+                ? 'Add an expense and toggle "Split this bill" to get started.'
+                : 'No split transactions matched your search query.',
             icon: Icons.splitscreen_rounded,
           );
         }

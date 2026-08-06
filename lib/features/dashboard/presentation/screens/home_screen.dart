@@ -554,11 +554,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             children: [
                                               Row(
                                                 children: [
-                                                  Text(
-                                                    tx.note ?? tx.category.name,
-                                                    style: AppTextStyles.body.copyWith(
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 14,
+                                                  Flexible(
+                                                    child: Text(
+                                                      tx.note ?? tx.category.name,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                      style: AppTextStyles.body.copyWith(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 14,
+                                                      ),
                                                     ),
                                                   ),
                                                   if (tx.isEncrypted) ...[

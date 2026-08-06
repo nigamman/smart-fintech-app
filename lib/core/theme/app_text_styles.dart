@@ -66,13 +66,13 @@ class AppTextStyles {
   );
 
   // Tabulated Mono figures style
-  static TextStyle get mono => GoogleFonts.spaceMono(
+  static TextStyle get mono => GoogleFonts.robotoMono(
     fontSize: 16,
     fontWeight: FontWeight.bold,
     color: AppColors.primaryText,
   );
 
-  static TextStyle get monoSecondary => GoogleFonts.spaceMono(
+  static TextStyle get monoSecondary => GoogleFonts.robotoMono(
     fontSize: 13,
     fontWeight: FontWeight.w500,
     color: AppColors.secondaryText,

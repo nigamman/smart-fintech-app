@@ -461,11 +461,15 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      tx.note ?? tx.category.name,
-                                      style: AppTextStyles.body.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                    Flexible(
+                                      child: Text(
+                                        tx.note ?? tx.category.name,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: AppTextStyles.body.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
                                       ),
                                     ),
                                     if (tx.isEncrypted) ...[
@@ -608,11 +612,15 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                                     children: [
                                       Row(
                                         children: [
-                                          Text(
-                                            tx.note ?? tx.category.name,
-                                            style: AppTextStyles.body.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
+                                          Flexible(
+                                            child: Text(
+                                              tx.note ?? tx.category.name,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              style: AppTextStyles.body.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
                                             ),
                                           ),
                                           if (tx.isEncrypted) ...[
@@ -895,7 +903,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
               // Main Body Layout
               Expanded(
                 child: showSplits
-                    ? const SplitLedgerScreen(isEmbedded: true)
+                    ? SplitLedgerScreen(isEmbedded: true, searchQuery: _searchQuery)
                     : transactionsAsync.when(
                         loading: () => ListView(
                           children: const [
