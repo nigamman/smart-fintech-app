@@ -8,6 +8,7 @@ class UserModel extends AppUser {
     required super.monthlyIncome,
     required super.monthlySavingsGoal,
     required super.createdAt,
+    super.isEncryptionEnabled = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -16,9 +17,9 @@ class UserModel extends AppUser {
       name: json['name'] as String,
       email: json['email'] as String,
       monthlyIncome: (json['monthlyIncome'] as num).toDouble(),
-      monthlySavingsGoal:
-      (json['monthlySavingsGoal'] as num).toDouble(),
+      monthlySavingsGoal: (json['monthlySavingsGoal'] as num).toDouble(),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      isEncryptionEnabled: json['isEncryptionEnabled'] as bool? ?? false,
     );
   }
 
@@ -30,6 +31,7 @@ class UserModel extends AppUser {
       'monthlyIncome': monthlyIncome,
       'monthlySavingsGoal': monthlySavingsGoal,
       'createdAt': createdAt.toIso8601String(),
+      'isEncryptionEnabled': isEncryptionEnabled,
     };
   }
 
@@ -40,15 +42,16 @@ class UserModel extends AppUser {
     double? monthlyIncome,
     double? monthlySavingsGoal,
     DateTime? createdAt,
+    bool? isEncryptionEnabled,
   }) {
     return UserModel(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
       monthlyIncome: monthlyIncome ?? this.monthlyIncome,
-      monthlySavingsGoal:
-      monthlySavingsGoal ?? this.monthlySavingsGoal,
+      monthlySavingsGoal: monthlySavingsGoal ?? this.monthlySavingsGoal,
       createdAt: createdAt ?? this.createdAt,
+      isEncryptionEnabled: isEncryptionEnabled ?? this.isEncryptionEnabled,
     );
   }
 }

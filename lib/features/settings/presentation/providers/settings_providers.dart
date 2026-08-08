@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../transaction/presentation/providers/transaction_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../auth/data/models/user_model.dart';
 
 class PreferencesState {
   final String currency;
@@ -68,6 +69,14 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
       );
     }
 
+    final hasKey = _box.containsKey('${userId}_isEncryptionEnabled');
+    if (!hasKey && user != null) {
+      _box.put('${userId}_isEncryptionEnabled', user.isEncryptionEnabled);
+      if (user.isEncryptionEnabled) {
+        _box.put('isEncryptionEnabled', true);
+      }
+    }
+
     final currency = _box.get('${userId}_currency', defaultValue: '₹') as String;
     final dateFormat = _box.get('${userId}_dateFormat', defaultValue: 'dd MMM yyyy') as String;
     
@@ -122,6 +131,13 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
   }
 
   Future<void> enableEncryption(String passphrase, String userId) async {
+    final authRepo = ref.read(authRepositoryProvider);
+    final currentUser = await authRepo.getCurrentUser();
+    if (currentUser != null && currentUser is UserModel) {
+      final updatedUser = currentUser.copyWith(isEncryptionEnabled: true);
+      await authRepo.updateProfile(updatedUser);
+    }
+
     final pinHash = sha256.convert(utf8.encode(passphrase)).toString();
     await _box.put('${userId}_isEncryptionEnabled', true);
     await _box.put('${userId}_syncPassphrase', passphrase);
@@ -150,6 +166,13 @@ class PreferencesNotifier extends Notifier<PreferencesState> {
   }
 
   Future<void> disableEncryption(String userId) async {
+    final authRepo = ref.read(authRepositoryProvider);
+    final currentUser = await authRepo.getCurrentUser();
+    if (currentUser != null && currentUser is UserModel) {
+      final updatedUser = currentUser.copyWith(isEncryptionEnabled: false);
+      await authRepo.updateProfile(updatedUser);
+    }
+
     final localDataSource = ref.read(transactionLocalDataSourceProvider);
     final remoteDataSource = ref.read(transactionRemoteDataSourceProvider);
     

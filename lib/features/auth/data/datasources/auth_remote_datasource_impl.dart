@@ -178,6 +178,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         monthlyIncome: 0.0,
         monthlySavingsGoal: 0.0,
         createdAt: DateTime.now().toUtc(),
+        isEncryptionEnabled: false,
       );
 
       await firestore

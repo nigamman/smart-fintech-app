@@ -366,7 +366,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                 );
 
                 return FadeInSlideUp(
-                  delayMs: 250 + (idx * 50),
+                  delayMs: 250 + (idx.clamp(0, 4) * 50),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: InkWell(
@@ -437,7 +437,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
 
             const SizedBox(height: 12),
             FadeInSlideUp(
-              delayMs: 300 + (progress.categoryProgresses.length * 50),
+              delayMs: 300 + (progress.categoryProgresses.length.clamp(0, 4) * 50),
               child: GestureDetector(
                 onTap: () => context.push('/add-budget'),
                 child: Container(
@@ -503,7 +503,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
               final pct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
 
               return FadeInSlideUp(
-                delayMs: 200 + (idx * 50),
+                delayMs: 200 + (idx.clamp(0, 4) * 50),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: InkWell(
@@ -648,7 +648,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
               }
 
               return FadeInSlideUp(
-                delayMs: 200 + (idx * 50),
+                delayMs: 200 + (idx.clamp(0, 4) * 50),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: InkWell(

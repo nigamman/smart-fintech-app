@@ -5,6 +5,7 @@ class AppUser {
   final double monthlyIncome;
   final double monthlySavingsGoal;
   final DateTime createdAt;
+  final bool isEncryptionEnabled;
 
   const AppUser({
     required this.id,
@@ -13,5 +14,6 @@ class AppUser {
     required this.monthlyIncome,
     required this.monthlySavingsGoal,
     required this.createdAt,
+    this.isEncryptionEnabled = false,
   });
 }

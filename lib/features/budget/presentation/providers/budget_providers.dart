@@ -64,8 +64,20 @@ class MonthlyBudgetProgress {
 
   double get remaining => totalLimit - totalSpent;
   double get progressPercentage => totalLimit > 0 ? totalSpent / totalLimit : 0;
-  bool get isWarning80 => progressPercentage >= 0.8 && progressPercentage < 1.0;
-  bool get isExceeded => progressPercentage >= 1.0;
+  
+  bool get isWarning80 {
+    if (totalLimit > 0 && progressPercentage >= 0.8 && progressPercentage < 1.0) {
+      return true;
+    }
+    return categoryProgresses.any((cp) => cp.limit > 0 && cp.spent / cp.limit >= 0.8 && cp.spent / cp.limit < 1.0);
+  }
+
+  bool get isExceeded {
+    if (totalLimit > 0 && progressPercentage >= 1.0) {
+      return true;
+    }
+    return categoryProgresses.any((cp) => cp.limit > 0 && cp.spent >= cp.limit);
+  }
 
   const MonthlyBudgetProgress({
     this.monthlyBudget,
@@ -121,7 +133,7 @@ final budgetProgressProvider = Provider<AsyncValue<MonthlyBudgetProgress>>((ref)
                   ? (user.monthlyIncome - user.monthlySavingsGoal).clamp(0.0, double.infinity)
                   : 0.0;
 
-              final totalLimit = fallbackLimit;
+              final totalLimit = overallBudget != null ? overallBudget.limitAmount : fallbackLimit;
 
               // Group expenses by category
               final categoryExpenses = <TransactionCategory, double>{};

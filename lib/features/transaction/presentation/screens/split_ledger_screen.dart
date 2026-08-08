@@ -639,7 +639,7 @@ class _SplitLedgerScreenState extends ConsumerState<SplitLedgerScreen> with Sing
                     : name;
 
                 return FadeInSlideUp(
-                  delayMs: 150 + (idx * 50),
+                  delayMs: 150 + (idx.clamp(0, 4) * 50),
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Card(

@@ -344,12 +344,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.security_rounded,
                     title: 'Privacy Shield (Local Sync)',
-                    subtitle: hasPassphrase
-                        ? 'Active (Zero-Knowledge Protected)'
+                    subtitle: preferences.isEncryptionEnabled
+                        ? (preferences.syncPassphrase != null
+                            ? 'Active (Zero-Knowledge Protected)'
+                            : 'Active (Locked - Tap to Unlock)')
                         : 'Secure cloud backups with device-side encryption',
-                    textColor: hasPassphrase ? const Color(0xFFC8A05B) : null,
+                    textColor: preferences.isEncryptionEnabled ? const Color(0xFFC8A05B) : null,
                     trailing: Switch(
-                      value: hasPassphrase,
+                      value: preferences.isEncryptionEnabled,
                       activeColor: const Color(0xFFC8A05B),
                       onChanged: (val) {
                         if (val) {
@@ -359,15 +361,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             _showPinSetupSheet(context, user.id);
                           }
                         } else {
-                          _confirmDisableEncryption(context, user.id);
+                          if (preferences.isEncryptionEnabled && preferences.syncPassphrase == null) {
+                            // If locked, verify PIN before allowing disable
+                            _showPinUnlockSheet(context);
+                          } else {
+                            _confirmDisableEncryption(context, user.id);
+                          }
                         }
                       },
                     ),
                     onTap: () {
-                      if (hasPassphrase) {
-                        _confirmDisableEncryption(context, user.id);
+                      if (preferences.isEncryptionEnabled) {
+                        if (preferences.syncPassphrase == null) {
+                          // Locked: tap to unlock
+                          _showPinUnlockSheet(context);
+                        } else {
+                          // Unlocked: tap to disable
+                          _confirmDisableEncryption(context, user.id);
+                        }
                       } else {
-                        if (preferences.isEncryptionEnabled || hasEncrypted) {
+                        if (hasEncrypted) {
                           _showPinUnlockSheet(context);
                         } else {
                           _showPinSetupSheet(context, user.id);
@@ -514,7 +527,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('App Version', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                        Text('1.9.0 ', style: AppTextStyles.bodySecondary),
+                        Text('1.9.1 ', style: AppTextStyles.bodySecondary),
                       ],
                     ),
                     VSpace.md,

@@ -414,6 +414,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
               return Column(
                 children: [
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: tx.isEncrypted
                         ? () {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -532,7 +533,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
         final dayTxs = grouped[date]!;
 
         return FadeInSlideUp(
-          delayMs: 150 + (dateIndex * 60),
+          delayMs: 150 + (dateIndex.clamp(0, 4) * 60),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -565,6 +566,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                     return Column(
                       children: [
                         GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: tx.isEncrypted
                               ? () {
                                   ScaffoldMessenger.of(context).showSnackBar(

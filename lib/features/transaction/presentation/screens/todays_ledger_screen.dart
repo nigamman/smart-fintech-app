@@ -270,6 +270,7 @@ class _TodaysLedgerScreenState extends ConsumerState<TodaysLedgerScreen> {
                                     return Column(
                                       children: [
                                         GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
                                           onTap: tx.isEncrypted
                                               ? () {
                                                   ScaffoldMessenger.of(context).showSnackBar(

@@ -34,9 +34,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   bool _isUnlockSheetOpen = false;
   bool _hasPromptedPinSetup = false;
+  bool _hasSkippedUnlock = false;
 
   void _showAutoUnlockSheet(BuildContext context) {
-    if (_isUnlockSheetOpen) return;
+    if (_isUnlockSheetOpen || _hasSkippedUnlock) return;
     _isUnlockSheetOpen = true;
 
     showModalBottomSheet(
@@ -49,7 +50,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         borderRadius: BorderRadius.zero,
       ),
       builder: (context) {
-        return const PinUnlockSheet();
+        return PinUnlockSheet(
+          onSkip: () {
+            setState(() {
+              _hasSkippedUnlock = true;
+            });
+          },
+        );
       },
     ).then((_) {
       _isUnlockSheetOpen = false;
@@ -379,25 +386,25 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<List<Transaction>>>(transactionsStreamProvider, (previous, next) {
-      if (next is AsyncData<List<Transaction>>) {
-        final transactions = next.value;
-        final preferences = ref.read(preferencesProvider);
-        final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
-        final isLocked = (preferences.isEncryptionEnabled && preferences.syncPassphrase == null) ||
-                         (hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null));
- 
-        if (isLocked) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showAutoUnlockSheet(context);
-          });
-        } else if (!hasEncrypted && !preferences.isEncryptionEnabled) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _checkAndPromptPinSetup();
-          });
-        }
+    final preferences = ref.watch(preferencesProvider);
+    final transactionsAsync = ref.watch(transactionsStreamProvider);
+    
+    if (transactionsAsync is AsyncData<List<Transaction>>) {
+      final transactions = transactionsAsync.value;
+      final hasEncrypted = transactions.any((tx) => tx.isEncrypted);
+      final isLocked = (preferences.isEncryptionEnabled && preferences.syncPassphrase == null) ||
+                       (hasEncrypted && (!preferences.isEncryptionEnabled || preferences.syncPassphrase == null));
+      
+      if (isLocked) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showAutoUnlockSheet(context);
+        });
+      } else if (!hasEncrypted && !preferences.isEncryptionEnabled) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _checkAndPromptPinSetup();
+        });
       }
-    });
+    }
 
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -513,12 +520,14 @@ class PinUnlockSheet extends ConsumerStatefulWidget {
   final bool isSetup;
   final bool isChange;
   final String? userId;
+  final VoidCallback? onSkip;
 
   const PinUnlockSheet({
     super.key,
     this.isSetup = false,
     this.isChange = false,
     this.userId,
+    this.onSkip,
   });
 
   @override
@@ -529,6 +538,7 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
   String _enteredPin = '';
   String? _firstPin;
   String? _oldPinInput;
+  bool _isLoading = false;
 
   void _handleKeyPress(String value) {
     if (_enteredPin.length >= 6) return;
@@ -560,12 +570,28 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
         });
       } else {
         if (_enteredPin == _firstPin) {
-          await ref.read(preferencesProvider.notifier).enableEncryption(_enteredPin, widget.userId ?? '');
-          if (mounted) {
-            Navigator.pop(context);
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(content: Text('Privacy Shield enabled successfully!')),
-            );
+          setState(() {
+            _isLoading = true;
+          });
+          try {
+            await ref.read(preferencesProvider.notifier).enableEncryption(_enteredPin, widget.userId ?? '');
+            if (mounted) {
+              Navigator.pop(context);
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(content: Text('Privacy Shield enabled successfully!')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _firstPin = null;
+                _enteredPin = '';
+              });
+              scaffoldMessenger.showSnackBar(
+                SnackBar(content: Text('Failed to enable Privacy Shield: $e')),
+              );
+            }
           }
         } else {
           setState(() {
@@ -599,12 +625,28 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
         });
       } else {
         if (_enteredPin == _firstPin) {
-          await ref.read(preferencesProvider.notifier).enableEncryption(_enteredPin, widget.userId ?? '');
-          if (mounted) {
-            Navigator.pop(context);
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(content: Text('PIN updated successfully!')),
-            );
+          setState(() {
+            _isLoading = true;
+          });
+          try {
+            await ref.read(preferencesProvider.notifier).enableEncryption(_enteredPin, widget.userId ?? '');
+            if (mounted) {
+              Navigator.pop(context);
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(content: Text('PIN updated successfully!')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _firstPin = null;
+                _enteredPin = '';
+              });
+              scaffoldMessenger.showSnackBar(
+                SnackBar(content: Text('Failed to update PIN: $e')),
+              );
+            }
           }
         } else {
           setState(() {
@@ -617,31 +659,51 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
         }
       }
     } else {
+      final transactionsAsync = ref.read(transactionsStreamProvider);
+      
+      if (transactionsAsync.isLoading) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Retrieving database entries... Please wait a moment before entering PIN.')),
+        );
+        setState(() {
+          _enteredPin = '';
+        });
+        return;
+      }
+      
+      if (transactionsAsync.hasError) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Database error: ${transactionsAsync.error}. Please try again later.')),
+        );
+        setState(() {
+          _enteredPin = '';
+        });
+        return;
+      }
+
+      final transactions = transactionsAsync.value ?? [];
+      final encryptedTxs = transactions.where((tx) => tx.isEncrypted).toList();
+
       bool isPinCorrect;
       if (ref.read(preferencesProvider.notifier).verifyPin(_enteredPin)) {
         isPinCorrect = true;
       } else if (preferences.syncPassphrase != null) {
         isPinCorrect = _enteredPin == preferences.syncPassphrase;
-      } else {
-        // Fresh install/re-login scenario: verify against encrypted database entries
-        final transactions = ref.read(transactionsStreamProvider).value ?? [];
-        final encryptedTxs = transactions.where((tx) => tx.isEncrypted).toList();
-        if (encryptedTxs.isNotEmpty) {
-          try {
-            final testTx = encryptedTxs.first;
-            if (testTx is TransactionModel) {
-              testTx.decrypt(_enteredPin);
-            } else {
-              (testTx as TransactionModel).decrypt(_enteredPin);
-            }
-            isPinCorrect = true;
-          } catch (_) {
-            isPinCorrect = false;
+      } else if (encryptedTxs.isNotEmpty) {
+        try {
+          final testTx = encryptedTxs.first;
+          if (testTx is TransactionModel) {
+            testTx.decrypt(_enteredPin);
+          } else {
+            (testTx as TransactionModel).decrypt(_enteredPin);
           }
-        } else {
-          // If there are no encrypted transactions, fallback to true so the user is not locked out
           isPinCorrect = true;
+        } catch (_) {
+          isPinCorrect = false;
         }
+      } else {
+        // If there are no encrypted transactions, fallback to true so the user is not locked out
+        isPinCorrect = true;
       }
 
       if (isPinCorrect) {
@@ -665,6 +727,9 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
 
   void _skipUnlock() {
     Navigator.pop(context);
+    if (widget.onSkip != null) {
+      widget.onSkip!();
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Viewing app in locked sync mode. Cloud entries are hidden.'),
@@ -747,6 +812,36 @@ class _PinUnlockSheetState extends ConsumerState<PinUnlockSheet> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                widget.isSetup ? 'Securing your ledger...' : 'Updating secure sync PIN...',
+                style: GoogleFonts.fraunces(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Encrypting and backing up data...',
+                style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     String title = 'Enter your PIN';
     String subtitle = 'Your data is encrypted on this device. Fumet cannot recover it if you forget your PIN.';
     IconData headerIcon = Icons.lock_outline_rounded;
